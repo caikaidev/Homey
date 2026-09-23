@@ -1,0 +1,6 @@
+{
+  "name": "家庭补给管家",
+  "description": "不用记什么时候该买什么，App 帮你预测并在真正需要行动时提醒。专注于宝宝供应链与家庭耗材智能补给与待办协同。",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

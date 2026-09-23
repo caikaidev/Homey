@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    
+    <!-- Base Supply Box / Basket -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M32,46 C32,44 34,42 36,42 L72,42 C74,42 76,44 76,46 L73,72 C72.5,76 69,79 65,79 L43,79 C39,79 35.5,76 35,72 Z" />
+    
+    <!-- Basket Front Cutout Texture / Contrast -->
+    <path
+        android:fillColor="#FFE8EDE8"
+        android:pathData="M36,54 L72,54 L71,68 C70.5,70 69,72 66,72 L42,72 C39,72 37.5,70 37,68 Z" />
+
+    <!-- Center Heart / Care symbol on basket -->
+    <path
+        android:fillColor="#FFF97316"
+        android:pathData="M54,67 C54,67 47,62 47,58 C47,56 48.5,54.5 50.5,54.5 C52,54.5 53.3,55.5 54,56.5 C54.7,55.5 56,54.5 57.5,54.5 C59.5,54.5 61,56 61,58 C61,62 54,67 54,67 Z" />
+
+    <!-- Baby Bottle / Supply Bottle sticking out left side -->
+    <path
+        android:fillColor="#FFFEF3C7"
+        android:pathData="M38,32 L46,32 L46,43 L38,43 Z" />
+    <path
+        android:fillColor="#FFF59E0B"
+        android:pathData="M40,28 L44,28 C45,28 45.5,29 45,30 L45,32 L39,32 L39,30 C38.5,29 39,28 40,28 Z" />
+    <path
+        android:fillColor="#FFFDE047"
+        android:pathData="M41,25 L43,25 C43.5,25 44,25.5 44,26 L44,28 L40,28 L40,26 C40,25.5 40.5,25 41,25 Z" />
+
+    <!-- Restock Checkmark / Sprout Badge on right side -->
+    <path
+        android:fillColor="#FF34D399"
+        android:pathData="M66,35 C70.5,35 74,38.5 74,43 C74,47.5 70.5,51 66,51 C61.5,51 58,47.5 58,43 C58,38.5 61.5,35 66,35 Z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="2.2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M62.5,43 L65,45.5 L69.5,40" />
+
+    <!-- Basket Handles / Arc -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:pathData="M40,42 C40,34 46,28 54,28 C57,28 59.5,29 61.5,30.5" />
+
+</vector>
