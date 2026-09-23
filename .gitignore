@@ -1,6 +1,5 @@
 *.iml
 .gradle
-.kotlin
 /local.properties
 /.idea/caches
 /.idea/libraries
@@ -14,5 +13,21 @@
 .externalNativeBuild
 .cxx
 local.properties
-.env
-debug.keystore
+/logs
+/.idea/gradle.xml
+
+# Local/private product and development documents
+/.local-docs/
+/docs/private/
+/openspec/
+/.codex/
+/PLAN.md
+/TASKS.md
+/NotiClaw_*_Plan*.md
+/*.private.md
+/.idea/misc.xml
+/.idea/vcs.xml
+/.idea/compiler.xml
+/.idea/runConfigurations.xml
+/.idea/AndroidProjectSystem.xml
+/.idea/deploymentTargetSelector.xml

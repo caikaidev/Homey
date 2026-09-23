@@ -1,4 +1,6 @@
 import com.google.gms.googleservices.GoogleServicesPlugin.MissingGoogleServicesStrategy
+import java.util.Properties
+import kotlin.apply
 
 plugins {
   alias(libs.plugins.android.application)
@@ -8,6 +10,15 @@ plugins {
   alias(libs.plugins.secrets)
   // alias(libs.plugins.google.services)
 }
+
+val signingProperties = Properties().apply {
+  val propertiesFile = rootProject.file("local.properties")
+  if (propertiesFile.exists()) {
+    propertiesFile.inputStream().use { load(it) }
+  }
+}
+val releaseStoreFilePath: String? = signingProperties.getProperty("noticlaw.release.storeFile")
+
 
 android {
   namespace = "com.example"
@@ -24,18 +35,13 @@ android {
   }
 
   signingConfigs {
-    create("release") {
-      val keystorePath = System.getenv("KEYSTORE_PATH") ?: "${rootDir}/my-upload-key.jks"
-      storeFile = file(keystorePath)
-      storePassword = System.getenv("STORE_PASSWORD")
-      keyAlias = "upload"
-      keyPassword = System.getenv("KEY_PASSWORD")
-    }
-    create("debugConfig") {
-      storeFile = file("${rootDir}/debug.keystore")
-      storePassword = "android"
-      keyAlias = "androiddebugkey"
-      keyPassword = "android"
+    if (releaseStoreFilePath != null) {
+      create("release") {
+        storeFile = file(releaseStoreFilePath)
+        storePassword = signingProperties.getProperty("noticlaw.release.storePassword")
+        keyAlias = signingProperties.getProperty("noticlaw.release.keyAlias")
+        keyPassword = signingProperties.getProperty("noticlaw.release.keyPassword")
+      }
     }
   }
 
@@ -46,7 +52,7 @@ android {
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
       signingConfig = signingConfigs.getByName("release")
     }
-    debug { signingConfig = signingConfigs.getByName("debugConfig") }
+    debug { signingConfig = signingConfigs.getByName("release") }
   }
   compileOptions {
     sourceCompatibility = JavaVersion.VERSION_11
