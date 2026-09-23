@@ -10,57 +10,34 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
+import com.example.ui.HomeyViewModel
 import com.example.ui.MainScreen
-import com.example.ui.SupplyViewModel
-import com.example.ui.theme.MyApplicationTheme
+import com.example.ui.theme.HomeyTheme
 
 class MainActivity : ComponentActivity() {
 
-    private val viewModel: SupplyViewModel by viewModels()
+    private val viewModel: HomeyViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-
         setContent {
-            MyApplicationTheme {
+            HomeyTheme {
                 val permissionLauncher = rememberLauncherForActivityResult(
-                    contract = ActivityResultContracts.RequestMultiplePermissions()
-                ) { /* Permissions result handled gracefully */ }
+                    ActivityResultContracts.RequestPermission()
+                ) { /* 拒绝也能正常使用，只是没有通知 */ }
 
                 LaunchedEffect(Unit) {
-                    val permissionsToRequest = mutableListOf<String>()
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        if (ContextCompat.checkSelfPermission(
-                                this@MainActivity,
-                                Manifest.permission.POST_NOTIFICATIONS
-                            ) != PackageManager.PERMISSION_GRANTED
-                        ) {
-                            permissionsToRequest.add(Manifest.permission.POST_NOTIFICATIONS)
-                        }
-                    }
-                    if (ContextCompat.checkSelfPermission(
-                            this@MainActivity,
-                            Manifest.permission.READ_CALENDAR
-                        ) != PackageManager.PERMISSION_GRANTED
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                        ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.POST_NOTIFICATIONS) !=
+                        PackageManager.PERMISSION_GRANTED
                     ) {
-                        permissionsToRequest.add(Manifest.permission.READ_CALENDAR)
-                        permissionsToRequest.add(Manifest.permission.WRITE_CALENDAR)
-                    }
-
-                    if (permissionsToRequest.isNotEmpty()) {
-                        permissionLauncher.launch(permissionsToRequest.toTypedArray())
+                        permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                     }
                 }
-
-                Surface(modifier = Modifier.fillMaxSize()) {
-                    MainScreen(viewModel = viewModel)
-                }
+                MainScreen(viewModel)
             }
         }
     }

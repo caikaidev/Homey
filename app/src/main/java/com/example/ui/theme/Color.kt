@@ -1,62 +1,75 @@
 package com.example.ui.theme
 
+import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
 
-// Primary Brand Colors (Forest Sage & Warm Coral)
-val BrandForestGreen = Color(0xFF1E5B4B)
-val BrandForestLight = Color(0xFF2C7A65)
-val BrandCoral = Color(0xFFE26D4A)
-val BrandCoralLight = Color(0xFFFF8C69)
+/** 与 Design 画布一致的配色。 */
+@Immutable
+data class HomeyColors(
+    val background: Color,
+    val surface: Color,
+    val surfaceMuted: Color,
+    val ink: Color,
+    val muted: Color,
+    val line: Color,
+    val green: Color,
+    val onGreen: Color,
+    val greenSoft: Color,
+    val coral: Color,
+    val onCoral: Color,
+    val urgent: Color,
+    val urgentSoft: Color,
+    val urgentDot: Color,
+    val warning: Color,
+    val warningSoft: Color,
+    val warningDot: Color,
+    val okDot: Color,
+    val checkboxBorder: Color,
+    val stepperBg: Color
+)
 
-// Accent & Status Colors
-val UrgentRed = Color(0xFFD32F2F)
-val UrgentRedContainer = Color(0xFFFFEBEE)
-val WarningAmber = Color(0xFFD97706)
-val WarningAmberContainer = Color(0xFFFEF3C7)
-val SuccessGreen = Color(0xFF059669)
-val SuccessGreenContainer = Color(0xFFD1FAE5)
-val InfoBlue = Color(0xFF0284C7)
-val InfoBlueContainer = Color(0xFFE0F2FE)
+val LightHomeyColors = HomeyColors(
+    background = Color(0xFFF7F4EE),
+    surface = Color(0xFFFFFFFF),
+    surfaceMuted = Color(0xFFEDE8DF),
+    ink = Color(0xFF1C1E1D),
+    muted = Color(0xFF5B615E),
+    line = Color(0xFFE6E1D8),
+    green = Color(0xFF1E5B4B),
+    onGreen = Color(0xFFFFFFFF),
+    greenSoft = Color(0xFFE3EFEA),
+    coral = Color(0xFFC2562F),
+    onCoral = Color(0xFFFFFFFF),
+    urgent = Color(0xFFA3261D),
+    urgentSoft = Color(0xFFFBE3E0),
+    urgentDot = Color(0xFFD1493D),
+    warning = Color(0xFF8A4B05),
+    warningSoft = Color(0xFFFBEFD6),
+    warningDot = Color(0xFFD99019),
+    okDot = Color(0xFF4E9A7F),
+    checkboxBorder = Color(0xFFB9B3A8),
+    stepperBg = Color(0xFFEFEAE1)
+)
 
-// Light Theme Palette
-val LightPrimary = Color(0xFF1E5B4B)
-val LightOnPrimary = Color(0xFFFFFFFF)
-val LightPrimaryContainer = Color(0xFFD8ECE6)
-val LightOnPrimaryContainer = Color(0xFF0D3228)
-
-val LightSecondary = Color(0xFFD96B43)
-val LightOnSecondary = Color(0xFFFFFFFF)
-val LightSecondaryContainer = Color(0xFFFFDBCF)
-val LightOnSecondaryContainer = Color(0xFF381406)
-
-val LightTertiary = Color(0xFF436577)
-val LightOnTertiary = Color(0xFFFFFFFF)
-val LightTertiaryContainer = Color(0xFFC7E7FF)
-val LightOnTertiaryContainer = Color(0xFF001E2E)
-
-val LightBackground = Color(0xFFF9F7F2) // Soft warm paper / cream
-val LightOnBackground = Color(0xFF1C1E1D)
-val LightSurface = Color(0xFFFFFFFF)
-val LightOnSurface = Color(0xFF1C1E1D)
-val LightSurfaceVariant = Color(0xFFEDE9E3)
-val LightOnSurfaceVariant = Color(0xFF444946)
-val LightOutline = Color(0xFFCBD2CE)
-
-// Dark Theme Palette
-val DarkPrimary = Color(0xFF8AD2BF)
-val DarkOnPrimary = Color(0xFF00382E)
-val DarkPrimaryContainer = Color(0xFF0D4B3D)
-val DarkOnPrimaryContainer = Color(0xFFA5EFDC)
-
-val DarkSecondary = Color(0xFFFFB59D)
-val DarkOnSecondary = Color(0xFF5A1C06)
-val DarkSecondaryContainer = Color(0xFF782C13)
-val DarkOnSecondaryContainer = Color(0xFFFFDBCF)
-
-val DarkBackground = Color(0xFF131514)
-val DarkOnBackground = Color(0xFFE2E4E1)
-val DarkSurface = Color(0xFF1B1E1C)
-val DarkOnSurface = Color(0xFFE2E4E1)
-val DarkSurfaceVariant = Color(0xFF2C322F)
-val DarkOnSurfaceVariant = Color(0xFFBFC6C2)
-val DarkOutline = Color(0xFF4C5450)
+val DarkHomeyColors = HomeyColors(
+    background = Color(0xFF141615),
+    surface = Color(0xFF1D201E),
+    surfaceMuted = Color(0xFF262A28),
+    ink = Color(0xFFE6E8E5),
+    muted = Color(0xFFA9B0AC),
+    line = Color(0xFF2F3431),
+    green = Color(0xFF8AD2BF),
+    onGreen = Color(0xFF00382E),
+    greenSoft = Color(0xFF173A31),
+    coral = Color(0xFFFFB59D),
+    onCoral = Color(0xFF5A1C06),
+    urgent = Color(0xFFFFB4AB),
+    urgentSoft = Color(0xFF4A1F1B),
+    urgentDot = Color(0xFFE5675C),
+    warning = Color(0xFFF5C27A),
+    warningSoft = Color(0xFF3F2E12),
+    warningDot = Color(0xFFE0A33A),
+    okDot = Color(0xFF6DB89C),
+    checkboxBorder = Color(0xFF5E6561),
+    stepperBg = Color(0xFF2B302D)
+)

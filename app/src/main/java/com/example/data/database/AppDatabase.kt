@@ -1,98 +1,81 @@
 package com.example.data.database
 
 import android.content.Context
+import android.database.sqlite.SQLiteDatabase
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import androidx.room.TypeConverters
-import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.data.dao.InventoryDao
 import com.example.data.dao.ProductDao
-import com.example.data.dao.PurchaseDao
-import com.example.data.dao.ReminderDao
+import com.example.data.dao.StockLogDao
 import com.example.data.dao.TodoDao
-import com.example.data.dao.UsageCycleDao
 import com.example.data.model.Inventory
 import com.example.data.model.Product
-import com.example.data.model.Purchase
-import com.example.data.model.Reminder
+import com.example.data.model.StockLog
 import com.example.data.model.Todo
-import com.example.data.model.UsageCycle
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Database(
-    entities = [
-        Product::class,
-        Inventory::class,
-        UsageCycle::class,
-        Purchase::class,
-        Todo::class,
-        Reminder::class
-    ],
-    version = 1,
-    exportSchema = false
+    entities = [Product::class, Inventory::class, StockLog::class, Todo::class],
+    version = AppDatabase.VERSION,
+    exportSchema = true
 )
-@TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun productDao(): ProductDao
     abstract fun inventoryDao(): InventoryDao
-    abstract fun usageCycleDao(): UsageCycleDao
-    abstract fun purchaseDao(): PurchaseDao
+    abstract fun stockLogDao(): StockLogDao
     abstract fun todoDao(): TodoDao
-    abstract fun reminderDao(): ReminderDao
 
     companion object {
+        const val VERSION = 2
+        const val NAME = "family_restock_master.db"
+
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
-        fun getDatabase(context: Context, scope: CoroutineScope): AppDatabase {
-            return INSTANCE ?: synchronized(this) {
-                val instance = Room.databaseBuilder(
-                    context.applicationContext,
-                    AppDatabase::class.java,
-                    "family_restock_master.db"
-                )
-                    .addCallback(DatabaseCallback(scope))
-                    .fallbackToDestructiveMigration()
-                    .build()
-                INSTANCE = instance
-                instance
+        fun get(context: Context): AppDatabase =
+            INSTANCE ?: synchronized(this) {
+                INSTANCE ?: build(context.applicationContext).also { INSTANCE = it }
             }
+
+        /**
+         * 故意不使用 fallbackToDestructiveMigration()：
+         * 缺少迁移时宁可崩溃（开发阶段就会发现），也不能静默清空用户数据。
+         */
+        private fun build(context: Context): AppDatabase {
+            PreMigrationBackup.run(context, NAME, VERSION)
+            return Room.databaseBuilder(context, AppDatabase::class.java, NAME)
+                .addMigrations(*Migrations.ALL)
+                .build()
         }
     }
+}
 
-    private class DatabaseCallback(
-        private val scope: CoroutineScope
-    ) : Callback() {
-        override fun onCreate(db: SupportSQLiteDatabase) {
-            super.onCreate(db)
-            INSTANCE?.let { database ->
-                scope.launch(Dispatchers.IO) {
-                    populateInitialData(database)
-                }
-            }
+/**
+ * 数据库升级前，先把原始 .db 文件原样复制一份到 files/backups/pre-migration/。
+ * 万一迁移逻辑有 bug，还能从这份文件里把数据救回来。
+ */
+object PreMigrationBackup {
+    fun run(context: Context, dbName: String, targetVersion: Int) {
+        val dbFile = context.getDatabasePath(dbName)
+        if (!dbFile.exists()) return
+        val currentVersion = try {
+            SQLiteDatabase.openDatabase(dbFile.path, null, SQLiteDatabase.OPEN_READONLY).use { it.version }
+        } catch (_: Exception) {
+            return
         }
+        if (currentVersion >= targetVersion) return
 
-        private suspend fun populateInitialData(database: AppDatabase) {
-            val productDao = database.productDao()
-            val inventoryDao = database.inventoryDao()
-            val usageCycleDao = database.usageCycleDao()
-            val todoDao = database.todoDao()
-
-            for (product in InitialData.initialProducts) {
-                productDao.insertProduct(product)
-            }
-            for (inventory in InitialData.getInitialInventories()) {
-                inventoryDao.insertInventory(inventory)
-            }
-            for (cycle in InitialData.getInitialUsageCycles()) {
-                usageCycleDao.insertUsageCycle(cycle)
-            }
-            for (todo in InitialData.getInitialTodos()) {
-                todoDao.insertTodo(todo)
+        val dir = File(context.filesDir, "backups/pre-migration").apply { mkdirs() }
+        val stamp = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date())
+        for (suffix in listOf("", "-wal", "-shm")) {
+            val source = File(dbFile.path + suffix)
+            if (source.exists()) {
+                runCatching { source.copyTo(File(dir, "$dbName.v$currentVersion.$stamp$suffix"), overwrite = true) }
             }
         }
     }

@@ -23,19 +23,19 @@ object NotificationHelper {
 
             val supplyChannel = NotificationChannel(
                 CHANNEL_ID_SUPPLIES,
-                "补给与采购提醒",
+                "该买了提醒",
                 NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
-                description = "家庭消耗品缺货预测与补货建议"
+                description = "家里的东西快用完时提醒你"
                 enableVibration(true)
             }
 
             val expiryChannel = NotificationChannel(
                 CHANNEL_ID_EXPIRY,
-                "食品临期提醒",
+                "快过期提醒",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "生鲜辅食临近保质期紧急提醒"
+                description = "食物快到保质期时提醒你"
                 enableVibration(true)
             }
 

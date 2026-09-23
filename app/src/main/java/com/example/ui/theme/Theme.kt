@@ -1,73 +1,45 @@
 package com.example.ui.theme
 
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.staticCompositionLocalOf
 
-private val DarkColorScheme = darkColorScheme(
-    primary = DarkPrimary,
-    onPrimary = DarkOnPrimary,
-    primaryContainer = DarkPrimaryContainer,
-    onPrimaryContainer = DarkOnPrimaryContainer,
-    secondary = DarkSecondary,
-    onSecondary = DarkOnSecondary,
-    secondaryContainer = DarkSecondaryContainer,
-    onSecondaryContainer = DarkOnSecondaryContainer,
-    background = DarkBackground,
-    onBackground = DarkOnBackground,
-    surface = DarkSurface,
-    onSurface = DarkOnSurface,
-    surfaceVariant = DarkSurfaceVariant,
-    onSurfaceVariant = DarkOnSurfaceVariant,
-    outline = DarkOutline
-)
+val LocalHomeyColors = staticCompositionLocalOf { LightHomeyColors }
 
-private val LightColorScheme = lightColorScheme(
-    primary = LightPrimary,
-    onPrimary = LightOnPrimary,
-    primaryContainer = LightPrimaryContainer,
-    onPrimaryContainer = LightOnPrimaryContainer,
-    secondary = LightSecondary,
-    onSecondary = LightOnSecondary,
-    secondaryContainer = LightSecondaryContainer,
-    onSecondaryContainer = LightOnSecondaryContainer,
-    tertiary = LightTertiary,
-    onTertiary = LightOnTertiary,
-    tertiaryContainer = LightTertiaryContainer,
-    onTertiaryContainer = LightOnTertiaryContainer,
-    background = LightBackground,
-    onBackground = LightOnBackground,
-    surface = LightSurface,
-    onSurface = LightOnSurface,
-    surfaceVariant = LightSurfaceVariant,
-    onSurfaceVariant = LightOnSurfaceVariant,
-    outline = LightOutline
-)
+object Homey {
+    val colors: HomeyColors
+        @Composable @ReadOnlyComposable get() = LocalHomeyColors.current
+}
 
 @Composable
-fun MyApplicationTheme(
+fun HomeyTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = false, // Set false to maintain our warm family brand identity
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+    val c = if (darkTheme) DarkHomeyColors else LightHomeyColors
+    val scheme = if (darkTheme) {
+        darkColorScheme(
+            primary = c.green, onPrimary = c.onGreen, primaryContainer = c.greenSoft,
+            secondary = c.coral, onSecondary = c.onCoral,
+            background = c.background, onBackground = c.ink,
+            surface = c.surface, onSurface = c.ink, surfaceVariant = c.surfaceMuted, onSurfaceVariant = c.muted,
+            outline = c.line, error = c.urgent
+        )
+    } else {
+        lightColorScheme(
+            primary = c.green, onPrimary = c.onGreen, primaryContainer = c.greenSoft,
+            secondary = c.coral, onSecondary = c.onCoral,
+            background = c.background, onBackground = c.ink,
+            surface = c.surface, onSurface = c.ink, surfaceVariant = c.surfaceMuted, onSurfaceVariant = c.muted,
+            outline = c.line, error = c.urgent
+        )
     }
-
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content
-    )
+    CompositionLocalProvider(LocalHomeyColors provides c) {
+        MaterialTheme(colorScheme = scheme, typography = Typography, content = content)
+    }
 }

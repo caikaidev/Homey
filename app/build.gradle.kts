@@ -1,4 +1,6 @@
 import com.google.gms.googleservices.GoogleServicesPlugin.MissingGoogleServicesStrategy
+import java.util.Properties
+import kotlin.apply
 
 plugins {
   alias(libs.plugins.android.application)
@@ -9,6 +11,15 @@ plugins {
   // alias(libs.plugins.google.services)
 }
 
+val signingProperties = Properties().apply {
+  val propertiesFile = rootProject.file("local.properties")
+  if (propertiesFile.exists()) {
+    propertiesFile.inputStream().use { load(it) }
+  }
+}
+val releaseStoreFilePath: String? = signingProperties.getProperty("noticlaw.release.storeFile")
+
+
 android {
   namespace = "com.example"
   compileSdk { version = release(36) { minorApiLevel = 1 } }
@@ -17,25 +28,20 @@ android {
     applicationId = "com.aistudio.familysupply.restock"
     minSdk = 24
     targetSdk = 36
-    versionCode = 1
-    versionName = "1.0"
+    versionCode = 2
+    versionName = "1.1"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
 
   signingConfigs {
-    create("release") {
-      val keystorePath = System.getenv("KEYSTORE_PATH") ?: "${rootDir}/my-upload-key.jks"
-      storeFile = file(keystorePath)
-      storePassword = System.getenv("STORE_PASSWORD")
-      keyAlias = "upload"
-      keyPassword = System.getenv("KEY_PASSWORD")
-    }
-    create("debugConfig") {
-      storeFile = file("${rootDir}/debug.keystore")
-      storePassword = "android"
-      keyAlias = "androiddebugkey"
-      keyPassword = "android"
+    if (releaseStoreFilePath != null) {
+      create("release") {
+        storeFile = file(releaseStoreFilePath)
+        storePassword = signingProperties.getProperty("noticlaw.release.storePassword")
+        keyAlias = signingProperties.getProperty("noticlaw.release.keyAlias")
+        keyPassword = signingProperties.getProperty("noticlaw.release.keyPassword")
+      }
     }
   }
 
@@ -46,7 +52,7 @@ android {
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
       signingConfig = signingConfigs.getByName("release")
     }
-    debug { signingConfig = signingConfigs.getByName("debugConfig") }
+    debug { signingConfig = signingConfigs.getByName("release") }
   }
   compileOptions {
     sourceCompatibility = JavaVersion.VERSION_11
@@ -61,6 +67,11 @@ android {
     includeInApk = false
     includeInBundle = true
   }
+}
+
+// Room 导出每个数据库版本的结构到 app/schemas/，请提交进仓库，用于核对迁移。
+ksp {
+  arg("room.schemaLocation", "$projectDir/schemas")
 }
 
 // Configure the Secrets Gradle Plugin to use .env and .env.example files
