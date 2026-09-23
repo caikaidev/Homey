@@ -1,20 +1,27 @@
 package com.example.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -50,61 +57,146 @@ import com.example.ui.screens.EditItemScreen
 import com.example.ui.screens.HomeScreen
 import com.example.ui.screens.InventoryScreen
 import com.example.ui.theme.Homey
+import com.example.ui.theme.Motion
+import kotlinx.coroutines.withTimeoutOrNull
+
+/** 带「撤销/撤回」按钮的提示显示多久；Material 默认的 Long 是 10 秒，太久了。 */
+private const val ACTION_SNACKBAR_MS = 4_000L
+private const val PLAIN_SNACKBAR_MS = 2_000L
+
+private val TAB_BAR_HEIGHT = 76.dp
 
 @Composable
 fun MainScreen(viewModel: HomeyViewModel) {
     val stack by viewModel.stack.collectAsStateWithLifecycle()
     val message by viewModel.message.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
-    val screen = stack.last()
+    val top = stack.last()
+    val onTabs = top.isTab()
 
-    BackHandler(enabled = stack.size > 1 || screen != Screen.Home) { viewModel.back() }
+    BackHandler(enabled = stack.size > 1 || top != Screen.Home) { viewModel.back() }
 
     LaunchedEffect(message) {
         val m = message ?: return@LaunchedEffect
-        val result = snackbar.showSnackbar(
-            message = m.text,
-            actionLabel = m.actionLabel,
-            duration = if (m.actionLabel != null) SnackbarDuration.Long else SnackbarDuration.Short
-        )
-        if (result == SnackbarResult.ActionPerformed) m.action?.invoke()
-        viewModel.consumeMessage(m.key)
+        try {
+            // 超时后协程取消，提示条随之收起；新提示到来时也会顶掉旧的
+            withTimeoutOrNull(if (m.actionLabel != null) ACTION_SNACKBAR_MS else PLAIN_SNACKBAR_MS) {
+                val result = snackbar.showSnackbar(
+                    message = m.text,
+                    actionLabel = m.actionLabel,
+                    duration = SnackbarDuration.Indefinite
+                )
+                if (result == SnackbarResult.ActionPerformed) m.action?.invoke()
+            }
+        } finally {
+            viewModel.consumeMessage(m.key)
+        }
     }
 
-    val showTabs = screen == Screen.Home || screen == Screen.Inventory
     Scaffold(
         containerColor = Homey.colors.background,
-        snackbarHost = { SnackbarHost(snackbar) },
-        bottomBar = {
-            if (showTabs) {
-                BottomBar(
-                    current = screen,
-                    onHome = { viewModel.switchTab(Screen.Home) },
-                    onInventory = { viewModel.switchTab(Screen.Inventory) },
-                    onAdd = { viewModel.open(Screen.Edit(null)) }
-                )
-            }
+        snackbarHost = {
+            SnackbarHost(snackbar, modifier = Modifier.padding(bottom = if (onTabs) TAB_BAR_HEIGHT else 0.dp))
         }
     ) { padding ->
-        Box(Modifier.fillMaxSize().padding(padding)) {
-            when (screen) {
-                Screen.Home -> HomeScreen(viewModel)
-                Screen.Inventory -> InventoryScreen(viewModel)
-                is Screen.Detail -> DetailScreen(viewModel, screen.id)
-                is Screen.Edit -> EditItemScreen(viewModel, screen.id)
-                Screen.Backup -> BackupScreen(viewModel)
+        AnimatedContent(
+            targetState = stack,
+            modifier = Modifier.fillMaxSize().padding(padding),
+            contentKey = { routeKey(it.last()) },
+            transitionSpec = { navigationTransition() },
+            label = "navigation"
+        ) { target ->
+            // 每个页面都铺满不透明背景，滑动时不会和下面的页面叠字
+            Box(Modifier.fillMaxSize().background(Homey.colors.background)) {
+                when (val screen = target.last()) {
+                    Screen.Home, Screen.Inventory -> TabsHost(viewModel)
+                    is Screen.Detail -> DetailScreen(viewModel, screen.id)
+                    is Screen.Edit -> EditItemScreen(viewModel, screen.id)
+                    Screen.Backup -> BackupScreen(viewModel)
+                }
             }
         }
+    }
+}
+
+private fun Screen.isTab() = this == Screen.Home || this == Screen.Inventory
+
+/** 两个 Tab 共用一个 key：Tab 之间切换由 [TabsHost] 内部淡入淡出，底部栏保持不动。 */
+private fun routeKey(screen: Screen): Any = if (screen.isTab()) "tabs" else screen
+
+/**
+ * 页面切换动效：
+ * - 进入下一级（详情、数据与备份）：新页面从右侧滑入，旧页面向左轻移并淡出（视差）；
+ * - 返回：当前页面向右滑出，盖在上一页上方离开；
+ * - 添加/编辑：从底部升起，关闭时落回底部，像一张表单卡片。
+ */
+private fun AnimatedContentTransitionScope<List<Screen>>.navigationTransition(): ContentTransform {
+    val from = initialState
+    val to = targetState
+    val forward = to.size > from.size
+    val backward = to.size < from.size
+    return when {
+        forward && to.last() is Screen.Edit -> ContentTransform(
+            targetContentEnter = slideInVertically(Motion.enter()) { it } + fadeIn(Motion.enter(Motion.FADE_MS)),
+            initialContentExit = fadeOut(Motion.exit(Motion.PAGE_ENTER_MS)),
+            sizeTransform = null
+        )
+        backward && from.last() is Screen.Edit -> ContentTransform(
+            targetContentEnter = fadeIn(Motion.enter(Motion.FADE_MS)),
+            initialContentExit = slideOutVertically(Motion.exit()) { it } + fadeOut(Motion.exit()),
+            targetContentZIndex = -1f,
+            sizeTransform = null
+        )
+        forward -> ContentTransform(
+            targetContentEnter = slideInHorizontally(Motion.enter()) { it } + fadeIn(Motion.enter(Motion.FADE_MS)),
+            initialContentExit = slideOutHorizontally(Motion.enter()) { -it / 4 } + fadeOut(Motion.enter()),
+            sizeTransform = null
+        )
+        backward -> ContentTransform(
+            targetContentEnter = slideInHorizontally(Motion.enter()) { -it / 4 } + fadeIn(Motion.enter()),
+            initialContentExit = slideOutHorizontally(Motion.exit()) { it } + fadeOut(Motion.exit()),
+            targetContentZIndex = -1f,
+            sizeTransform = null
+        )
+        else -> fadeIn(Motion.enter(Motion.FADE_MS)) togetherWith fadeOut(Motion.exit(Motion.FADE_MS))
+    }
+}
+
+/** 今天 / 物品 两个 Tab 与底部栏。Tab 是返回栈的根，所以当前 Tab 就是 stack.first()。 */
+@Composable
+private fun TabsHost(viewModel: HomeyViewModel) {
+    val stack by viewModel.stack.collectAsStateWithLifecycle()
+    val tab = stack.first()
+    Column(Modifier.fillMaxSize()) {
+        AnimatedContent(
+            targetState = tab,
+            modifier = Modifier.weight(1f),
+            transitionSpec = {
+                fadeIn(Motion.enter(Motion.STATE_MS)) + slideInVertically(Motion.enter(Motion.STATE_MS)) { it / 40 } togetherWith
+                    fadeOut(Motion.exit(Motion.FADE_MS))
+            },
+            label = "tabs"
+        ) { current ->
+            Box(Modifier.fillMaxSize().background(Homey.colors.background)) {
+                if (current == Screen.Inventory) InventoryScreen(viewModel) else HomeScreen(viewModel)
+            }
+        }
+        BottomBar(
+            current = tab,
+            onHome = { viewModel.switchTab(Screen.Home) },
+            onInventory = { viewModel.switchTab(Screen.Inventory) },
+            onAdd = { viewModel.open(Screen.Edit(null)) }
+        )
     }
 }
 
 @Composable
 private fun BottomBar(current: Screen, onHome: () -> Unit, onInventory: () -> Unit, onAdd: () -> Unit) {
     val c = Homey.colors
-    Column(Modifier.fillMaxWidth().background(c.surface).windowInsetsPadding(WindowInsets.navigationBars)) {
+    Column(Modifier.fillMaxWidth().background(c.surface)) {
         HorizontalDivider(color = c.line)
         Row(
-            modifier = Modifier.fillMaxWidth().height(76.dp).padding(horizontal = 24.dp),
+            modifier = Modifier.fillMaxWidth().height(TAB_BAR_HEIGHT).padding(horizontal = 24.dp),
             horizontalArrangement = Arrangement.SpaceAround,
             verticalAlignment = Alignment.CenterVertically
         ) {

@@ -56,6 +56,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.backup.BackupPreview
 import com.example.data.backup.RestoreMode
 import com.example.ui.HomeyViewModel
+import com.example.ui.Screen
 import com.example.ui.components.ChoiceTile
 import com.example.ui.components.SectionCard
 import com.example.ui.components.SettingRow
@@ -86,7 +87,7 @@ fun BackupScreen(viewModel: HomeyViewModel) {
 
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(4.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { viewModel.back() }) {
+            IconButton(onClick = { viewModel.backFrom(Screen.Backup) }) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回", tint = c.ink)
             }
         }

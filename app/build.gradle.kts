@@ -1,6 +1,5 @@
 import com.google.gms.googleservices.GoogleServicesPlugin.MissingGoogleServicesStrategy
 import java.util.Properties
-import kotlin.apply
 
 plugins {
   alias(libs.plugins.android.application)
@@ -50,9 +49,13 @@ android {
       isCrunchPngs = false
       isMinifyEnabled = false
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-      signingConfig = signingConfigs.getByName("release")
+      // 没有配置签名（CI、新电脑）时打未签名包，不影响编译和测试
+      signingConfig = signingConfigs.findByName("release")
     }
-    debug { signingConfig = signingConfigs.getByName("release") }
+    debug {
+      // 配置了 release 签名就沿用，否则使用系统默认的调试签名
+      signingConfigs.findByName("release")?.let { signingConfig = it }
+    }
   }
   compileOptions {
     sourceCompatibility = JavaVersion.VERSION_11

@@ -1,5 +1,13 @@
 package com.example.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -32,10 +40,13 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -57,6 +68,7 @@ import com.example.ui.components.SectionTitle
 import com.example.ui.components.StatusPill
 import com.example.ui.components.toneInk
 import com.example.ui.theme.Homey
+import com.example.ui.theme.Motion
 import java.util.Calendar
 
 @Composable
@@ -73,7 +85,7 @@ fun HomeScreen(viewModel: HomeyViewModel) {
             contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 28.dp, bottom = 96.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            item {
+            item(key = "header") {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(dateText, fontSize = 13.sp, color = c.muted)
                     val title = when {
@@ -94,12 +106,12 @@ fun HomeScreen(viewModel: HomeyViewModel) {
             }
 
             if (state.loaded && !state.hasAnyItem) {
-                item { EmptyHome(onAdd = { viewModel.open(Screen.Edit(null)) }, onSamples = viewModel::addSamples) }
+                item(key = "empty") { EmptyHome(modifier = Modifier.animateItem(), onAdd = { viewModel.open(Screen.Edit(null)) }, onSamples = viewModel::addSamples) }
             }
 
             if (state.shopping.isNotEmpty()) {
-                item {
-                    SectionCard {
+                item(key = "shopping") {
+                    SectionCard(Modifier.animateItem()) {
                         SectionTitle("该买了", trailing = "买到后勾选，自动入库")
                         state.shopping.forEachIndexed { index, item ->
                             if (index > 0) HorizontalDivider(color = c.line)
@@ -115,8 +127,8 @@ fun HomeScreen(viewModel: HomeyViewModel) {
             }
 
             if (state.expiring.isNotEmpty()) {
-                item {
-                    SectionCard {
+                item(key = "expiring") {
+                    SectionCard(Modifier.animateItem()) {
                         SectionTitle("快过期，先吃掉")
                         state.expiring.forEach { item ->
                             Row(
@@ -140,13 +152,14 @@ fun HomeScreen(viewModel: HomeyViewModel) {
             }
 
             if (state.soon.isNotEmpty()) {
-                item {
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                item(key = "soon") {
+                    Column(Modifier.animateItem(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text("一周内会用完", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = c.muted, modifier = Modifier.padding(start = 4.dp))
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             items(state.soon, key = { it.id }) { item ->
                                 Column(
                                     modifier = Modifier
+                                        .animateItem()
                                         .width(160.dp)
                                         .clip(RoundedCornerShape(14.dp))
                                         .background(c.surfaceMuted)
@@ -164,24 +177,31 @@ fun HomeScreen(viewModel: HomeyViewModel) {
             }
 
             if (state.loaded && state.hasAnyItem && state.total == 0 && state.soon.isEmpty()) {
-                item {
-                    Text("家里的东西都够用，有情况会提前提醒你。", fontSize = 14.sp, color = c.muted)
+                item(key = "allGood") {
+                    Text(modifier = Modifier.animateItem(), text = "家里的东西都够用，有情况会提前提醒你。", fontSize = 14.sp, color = c.muted)
                 }
             }
         }
 
-        if (checkedCount > 0) {
+        // 按钮收起时保留最后一次的数量，避免动画过程中闪成「0 件」
+        var shownCount by remember { mutableIntStateOf(0) }
+        if (checkedCount > 0) shownCount = checkedCount
+        AnimatedVisibility(
+            visible = checkedCount > 0,
+            modifier = Modifier.align(Alignment.BottomCenter),
+            enter = slideInVertically(Motion.enter()) { it } + fadeIn(Motion.enter(Motion.FADE_MS)),
+            exit = slideOutVertically(Motion.exit()) { it } + fadeOut(Motion.exit())
+        ) {
             Button(
                 onClick = viewModel::stockInChecked,
                 modifier = Modifier
-                    .align(Alignment.BottomCenter)
                     .padding(horizontal = 16.dp, vertical = 16.dp)
                     .fillMaxWidth()
                     .height(52.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = c.green, contentColor = c.onGreen)
             ) {
-                Text("已买到 $checkedCount 件，一键入库", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                Text("已买到 $shownCount 件，一键入库", fontSize = 15.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -202,12 +222,19 @@ private fun ShoppingRow(item: ItemStatus, checked: Boolean, onToggle: () -> Unit
             contentAlignment = Alignment.Center
         ) {
             val shape = RoundedCornerShape(8.dp)
-            if (checked) {
-                Box(Modifier.size(26.dp).clip(shape).background(c.green), contentAlignment = Alignment.Center) {
+            val fill by animateColorAsState(if (checked) c.green else Color.Transparent, Motion.state(), label = "checkFill")
+            val stroke by animateColorAsState(if (checked) c.green else c.checkboxBorder, Motion.state(), label = "checkStroke")
+            Box(
+                Modifier.size(26.dp).clip(shape).background(fill).border(2.dp, stroke, shape),
+                contentAlignment = Alignment.Center
+            ) {
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = checked,
+                    enter = scaleIn(Motion.enter(Motion.STATE_MS), initialScale = 0.4f) + fadeIn(Motion.enter(Motion.FADE_MS)),
+                    exit = scaleOut(Motion.exit(Motion.FADE_MS), targetScale = 0.4f) + fadeOut(Motion.exit(Motion.FADE_MS))
+                ) {
                     Icon(Icons.Filled.Check, contentDescription = "已买到${item.product.name}", tint = c.onGreen, modifier = Modifier.size(18.dp))
                 }
-            } else {
-                Box(Modifier.size(26.dp).border(2.dp, c.checkboxBorder, shape))
             }
         }
         Column(
@@ -223,7 +250,8 @@ private fun ShoppingRow(item: ItemStatus, checked: Boolean, onToggle: () -> Unit
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            Text(item.reasonText, fontSize = 12.sp, color = if (checked) c.muted else toneInk(item.tone))
+            val reasonColor by animateColorAsState(if (checked) c.muted else toneInk(item.tone), Motion.state(), label = "reason")
+            Text(item.reasonText, fontSize = 12.sp, color = reasonColor)
         }
         Text(suggestText(item), fontSize = 13.sp, color = c.muted)
         Spacer(Modifier.width(4.dp))
@@ -231,9 +259,9 @@ private fun ShoppingRow(item: ItemStatus, checked: Boolean, onToggle: () -> Unit
 }
 
 @Composable
-private fun EmptyHome(onAdd: () -> Unit, onSamples: () -> Unit) {
+private fun EmptyHome(modifier: Modifier = Modifier, onAdd: () -> Unit, onSamples: () -> Unit) {
     val c = Homey.colors
-    SectionCard {
+    SectionCard(modifier) {
         Column(Modifier.padding(vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("先把家里常用、容易断货的几样东西加进来。", fontSize = 15.sp, color = c.ink)
             Text("加好以后，这里会告诉你今天该买什么、什么快过期。", fontSize = 13.sp, color = c.muted)

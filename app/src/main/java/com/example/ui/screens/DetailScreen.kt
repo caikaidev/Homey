@@ -1,5 +1,13 @@
 package com.example.ui.screens
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -45,26 +53,33 @@ import com.example.domain.prediction.PredictionEngine
 import com.example.ui.HomeyViewModel
 import com.example.ui.Screen
 import com.example.ui.components.ChoiceTile
+import com.example.ui.components.NumberStepper
 import com.example.ui.components.SectionCard
 import com.example.ui.components.SettingRow
-import com.example.ui.components.Stepper
 import com.example.ui.components.toneInk
 import com.example.ui.components.toneSoft
 import com.example.ui.theme.DisplayFont
 import com.example.ui.theme.Homey
+import com.example.ui.theme.Motion
+import kotlin.math.roundToInt
 
 private val LEVELS = listOf(100 to "满", 75 to "75%", 50 to "50%", 25 to "25%", 0 to "用完")
 
 @Composable
 fun DetailScreen(viewModel: HomeyViewModel, id: String) {
     val items by viewModel.items.collectAsStateWithLifecycle()
-    val item = items?.firstOrNull { it.id == id }
+    val current = items?.firstOrNull { it.id == id }
     val c = Homey.colors
     var confirmDelete by remember { mutableStateOf(false) }
 
+    // 物品被删除后页面会滑出，这段时间里继续显示最后一次的内容，而不是闪成空白
+    var lastSeen by remember { mutableStateOf<ItemStatus?>(null) }
+    if (current != null && current != lastSeen) lastSeen = current
+    val item = current ?: lastSeen
+
     // 物品被删除（或恢复备份后不存在了）时自动返回
     LaunchedEffect(items, id) {
-        if (items != null && item == null) viewModel.back()
+        if (items != null && current == null) viewModel.backFrom(Screen.Detail(id))
     }
     if (item == null) return
     val p = item.product
@@ -75,7 +90,7 @@ fun DetailScreen(viewModel: HomeyViewModel, id: String) {
             modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = { viewModel.back() }) {
+            IconButton(onClick = { viewModel.backFrom(Screen.Detail(id)) }) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回", tint = c.ink)
             }
             Box(Modifier.weight(1f))
@@ -113,13 +128,14 @@ fun DetailScreen(viewModel: HomeyViewModel, id: String) {
                             }
                         }
                     }
-                    else -> SettingRow("现在有", subtitle = "点加减随手修正") {
-                        Stepper(
-                            valueText = "${PredictionEngine.formatQty(item.quantity)} $unit",
-                            onMinus = { viewModel.adjust(id, -1.0) },
-                            onPlus = { viewModel.adjust(id, 1.0) },
-                            minusLabel = "减少 1 $unit",
-                            plusLabel = "增加 1 $unit"
+                    else -> SettingRow("现在有", subtitle = "点数字可直接输入") {
+                        NumberStepper(
+                            value = item.quantity.roundToInt(),
+                            onValueChange = { viewModel.setQuantity(id, it) },
+                            unit = unit,
+                            label = "现在的数量",
+                            commitWhileTyping = false,
+                            onStep = { delta -> viewModel.adjust(id, delta.toDouble()) }
                         )
                     }
                 }
@@ -198,31 +214,45 @@ private fun StatusCard(item: ItemStatus) {
         TrackingMode.EXPIRY -> null
     }
 
+    val cardBg by animateColorAsState(toneSoft(item.tone), Motion.state(400), label = "statusBg")
+    val animatedInk by animateColorAsState(ink, Motion.state(400), label = "statusInk")
+    val animatedProgress by animateFloatAsState(progress ?: 0f, Motion.state(500), label = "progress")
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(22.dp))
-            .background(toneSoft(item.tone))
+            .background(cardBg)
             .padding(horizontal = 20.dp, vertical = 22.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(headline, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = ink)
-            Text(
-                buildAnnotatedString {
-                    append(big)
-                    if (bigUnit.isNotEmpty()) withStyle(SpanStyle(fontSize = 22.sp)) { append(" $bigUnit") }
+            Text(headline, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = animatedInk)
+            // 数字变化时上下滚动：变大从下往上，变小从上往下
+            AnimatedContent(
+                targetState = big to bigUnit,
+                transitionSpec = {
+                    val up = (targetState.first.toIntOrNull() ?: 0) >= (initialState.first.toIntOrNull() ?: 0)
+                    (slideInVertically(Motion.enter(Motion.STATE_MS + 60)) { if (up) it / 2 else -it / 2 } + fadeIn(Motion.enter(Motion.STATE_MS)))
+                        .togetherWith(slideOutVertically(Motion.exit(Motion.STATE_MS)) { if (up) -it / 2 else it / 2 } + fadeOut(Motion.exit(Motion.FADE_MS)))
                 },
-                fontFamily = DisplayFont,
-                fontSize = 56.sp,
-                lineHeight = 62.sp,
-                fontWeight = FontWeight.Bold,
-                color = ink
-            )
+                label = "bigNumber"
+            ) { (number, numberUnit) ->
+                Text(
+                    buildAnnotatedString {
+                        append(number)
+                        if (numberUnit.isNotEmpty()) withStyle(SpanStyle(fontSize = 22.sp)) { append(" $numberUnit") }
+                    },
+                    fontFamily = DisplayFont,
+                    fontSize = 56.sp,
+                    lineHeight = 62.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = animatedInk
+                )
+            }
         }
         if (progress != null) {
             Box(Modifier.fillMaxWidth().height(8.dp).clip(CircleShape).background(c.ink.copy(alpha = 0.1f))) {
-                Box(Modifier.fillMaxWidth(progress).height(8.dp).clip(CircleShape).background(ink))
+                Box(Modifier.fillMaxWidth(animatedProgress).height(8.dp).clip(CircleShape).background(animatedInk))
             }
         }
         Text(adviceText(item), fontSize = 13.sp, color = c.ink.copy(alpha = 0.8f))

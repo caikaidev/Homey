@@ -1,5 +1,10 @@
 package com.example.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -45,12 +50,14 @@ import com.example.data.model.mode
 import com.example.data.repository.ItemDraft
 import com.example.domain.prediction.PredictionEngine
 import com.example.ui.HomeyViewModel
+import com.example.ui.Screen
 import com.example.ui.components.ChipButton
 import com.example.ui.components.ChoiceTile
+import com.example.ui.components.NumberStepper
 import com.example.ui.components.SectionCard
 import com.example.ui.components.SettingRow
-import com.example.ui.components.Stepper
 import com.example.ui.theme.Homey
+import com.example.ui.theme.Motion
 
 private data class Preset(
     val label: String,
@@ -156,7 +163,7 @@ fun EditItemScreen(viewModel: HomeyViewModel, id: String?) {
 
     Column(Modifier.fillMaxSize().imePadding()) {
         Row(Modifier.fillMaxWidth().padding(4.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { viewModel.back() }) { Icon(Icons.Filled.Close, contentDescription = "关闭", tint = c.ink) }
+            IconButton(onClick = { viewModel.backFrom(Screen.Edit(id)) }) { Icon(Icons.Filled.Close, contentDescription = "关闭", tint = c.ink) }
             Text(
                 if (isEdit) "编辑物品" else "添加物品",
                 modifier = Modifier.weight(1f),
@@ -215,7 +222,7 @@ fun EditItemScreen(viewModel: HomeyViewModel, id: String?) {
                     TrackingMode.COUNT -> {
                         if (!isEdit) {
                             SettingRow("现在有") {
-                                Stepper("$quantity $unit", { quantity = (quantity - 1).coerceAtLeast(0) }, { quantity += 1 })
+                                NumberStepper(quantity, { quantity = it }, unit, label = "数量")
                             }
                         }
                         SettingRow("每天大约用", subtitle = "填 0 表示常备品，不预测", showDivider = false) {
@@ -242,77 +249,88 @@ fun EditItemScreen(viewModel: HomeyViewModel, id: String?) {
                             }
                         }
                         SettingRow("一整${unit}大约用", showDivider = false) {
-                            Stepper("$lifeDays 天", { lifeDays = (lifeDays - 5).coerceAtLeast(1) }, { lifeDays += 5 })
+                            NumberStepper(lifeDays, { lifeDays = it }, "天", label = "一整${unit}大约用几天", step = 5, min = 1, max = 999)
                         }
                     }
                     TrackingMode.EXPIRY -> {
                         if (!isEdit) {
                             SettingRow("数量") {
-                                Stepper("$quantity $unit", { quantity = (quantity - 1).coerceAtLeast(0) }, { quantity += 1 })
+                                NumberStepper(quantity, { quantity = it }, unit, label = "数量")
                             }
                             SettingRow("几天后过期", showDivider = showMore) {
-                                Stepper("$expiresIn 天", { expiresIn = (expiresIn - 1).coerceAtLeast(0) }, { expiresIn += 1 })
+                                NumberStepper(expiresIn, { expiresIn = it }, "天", label = "几天后过期", max = 999)
                             }
                         }
                         if (isEdit || showMore) {
                             SettingRow("每次买回来大约能放", showDivider = false) {
-                                Stepper("$lifeDays 天", { lifeDays = (lifeDays - 1).coerceAtLeast(1) }, { lifeDays += 1 })
+                                NumberStepper(lifeDays, { lifeDays = it }, "天", label = "买回来能放几天", min = 1, max = 999)
                             }
                         }
                     }
                 }
             }
 
-            if (!showMore) {
+            AnimatedVisibility(
+                visible = !showMore,
+                enter = fadeIn(Motion.enter(Motion.FADE_MS)),
+                exit = fadeOut(Motion.exit(Motion.FADE_MS)) + shrinkVertically(Motion.exit())
+            ) {
                 TextButton(onClick = {
                     showMore = true
                     if (mode == TrackingMode.EXPIRY) lifeDays = expiresIn.coerceAtLeast(1)
                 }) {
                     Text("更多设置：分类、位置、提前几天提醒", color = c.green)
                 }
-            } else {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("分类", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = c.ink)
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(ProductCategory.entries) { cat -> ChipButton(cat.label, category == cat, { category = cat }) }
+            }
+            AnimatedVisibility(
+                visible = showMore,
+                enter = expandVertically(Motion.enter()) + fadeIn(Motion.enter()),
+                exit = shrinkVertically(Motion.exit()) + fadeOut(Motion.exit())
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(22.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text("分类", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = c.ink)
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(ProductCategory.entries) { cat -> ChipButton(cat.label, category == cat, { category = cat }) }
+                        }
                     }
+                    SectionCard {
+                        SettingRow("提前几天提醒我买", subtitle = "算上快递路上的时间") {
+                            NumberStepper(remind, { remind = it }, "天", label = "提前几天提醒", max = 99)
+                        }
+                        if (mode != TrackingMode.LEVEL) {
+                            SettingRow("每次大约买多少") { NumberField(restockText, { restockText = it }, unit, fieldColors) }
+                        }
+                        SettingRow("单位", showDivider = false) {
+                            OutlinedTextField(
+                                value = unit,
+                                onValueChange = { unit = it.take(4) },
+                                singleLine = true,
+                                modifier = Modifier.width(96.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = fieldColors
+                            )
+                        }
+                    }
+                    OutlinedTextField(
+                        value = location,
+                        onValueChange = { location = it },
+                        label = { Text("放在哪（选填）") },
+                        placeholder = { Text("如：主卧衣柜、冷藏室") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = fieldColors
+                    )
+                    OutlinedTextField(
+                        value = note,
+                        onValueChange = { note = it },
+                        label = { Text("备注（选填）") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = fieldColors
+                    )
                 }
-                SectionCard {
-                    SettingRow("提前几天提醒我买", subtitle = "算上快递路上的时间") {
-                        Stepper("$remind 天", { remind = (remind - 1).coerceAtLeast(0) }, { remind += 1 })
-                    }
-                    if (mode != TrackingMode.LEVEL) {
-                        SettingRow("每次大约买多少") { NumberField(restockText, { restockText = it }, unit, fieldColors) }
-                    }
-                    SettingRow("单位", showDivider = false) {
-                        OutlinedTextField(
-                            value = unit,
-                            onValueChange = { unit = it.take(4) },
-                            singleLine = true,
-                            modifier = Modifier.width(96.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = fieldColors
-                        )
-                    }
-                }
-                OutlinedTextField(
-                    value = location,
-                    onValueChange = { location = it },
-                    label = { Text("放在哪（选填）") },
-                    placeholder = { Text("如：主卧衣柜、冷藏室") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = fieldColors
-                )
-                OutlinedTextField(
-                    value = note,
-                    onValueChange = { note = it },
-                    label = { Text("备注（选填）") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = fieldColors
-                )
             }
             Box(Modifier.height(8.dp))
         }
