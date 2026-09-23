@@ -34,10 +34,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.data.model.TrackingMode
 import com.example.data.model.categoryEnum
 import com.example.domain.prediction.ItemStatus
 import com.example.domain.prediction.PredictionEngine
-import com.example.data.model.TrackingMode
 import com.example.ui.HomeyViewModel
 import com.example.ui.Screen
 import com.example.ui.components.ChipButton

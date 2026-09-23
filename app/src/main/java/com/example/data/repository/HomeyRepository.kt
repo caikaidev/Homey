@@ -116,32 +116,48 @@ class HomeyRepository(private val db: AppDatabase) {
         }
     }
 
-    /** 手动加减数量。看保质期的物品减少时，优先从最早到期的那批扣。 */
+    /** 手动加减数量。减少时依次从批次里扣：看保质期的先扣最早到期的，其他先扣最早的一批。 */
     suspend fun adjustQuantity(id: String, delta: Double, now: Long = System.currentTimeMillis()) {
         db.withTransaction {
             val product = products.getById(id) ?: return@withTransaction
-            val batches = inventories.getByProduct(id)
-            var applied = 0.0
-            if (product.mode == TrackingMode.EXPIRY && delta < 0) {
-                var remaining = -delta
-                val ordered = batches.filter { it.quantity > 0 }.sortedBy { it.expiresAt ?: Long.MAX_VALUE }
-                for (batch in ordered) {
-                    if (remaining <= 0) break
-                    val take = minOf(batch.quantity, remaining)
-                    inventories.upsert(batch.copy(quantity = batch.quantity - take, updatedAt = now))
-                    remaining -= take
-                    applied -= take
-                }
-            } else {
-                val primary = primaryBatch(product, batches, now)
-                val newQty = (primary.quantity + delta).coerceAtLeast(0.0)
-                applied = newQty - primary.quantity
-                inventories.upsert(primary.copy(quantity = newQty, updatedAt = now))
+            applyDelta(product, delta, now)
+        }
+    }
+
+    /** 直接改成某个数量（输入框）。在事务里按当前库存算差值，重复调用结果一样。 */
+    suspend fun setQuantity(id: String, target: Double, now: Long = System.currentTimeMillis()) {
+        db.withTransaction {
+            val product = products.getById(id) ?: return@withTransaction
+            val current = inventories.getByProduct(id).sumOf { it.quantity.coerceAtLeast(0.0) }
+            applyDelta(product, target.coerceAtLeast(0.0) - current, now)
+        }
+    }
+
+    private suspend fun applyDelta(product: Product, delta: Double, now: Long) {
+        if (delta == 0.0) return
+        val id = product.id
+        val batches = inventories.getByProduct(id)
+        var applied = 0.0
+        if (delta < 0) {
+            var remaining = -delta
+            val ordered = batches.filter { it.quantity > 0 }.let { live ->
+                if (product.mode == TrackingMode.EXPIRY) live.sortedBy { it.expiresAt ?: Long.MAX_VALUE } else live.sortedBy { it.createdAt }
             }
-            if (applied != 0.0) {
-                logs.insert(StockLog(productId = id, type = StockLogType.ADJUST.name, delta = applied, createdAt = now))
-                products.upsert(product.copy(updatedAt = now))
+            for (batch in ordered) {
+                if (remaining <= 0) break
+                val take = minOf(batch.quantity, remaining)
+                inventories.upsert(batch.copy(quantity = batch.quantity - take, updatedAt = now))
+                remaining -= take
+                applied -= take
             }
+        } else {
+            val primary = primaryBatch(product, batches, now)
+            inventories.upsert(primary.copy(quantity = primary.quantity + delta, updatedAt = now))
+            applied = delta
+        }
+        if (applied != 0.0) {
+            logs.insert(StockLog(productId = id, type = StockLogType.ADJUST.name, delta = applied, createdAt = now))
+            products.upsert(product.copy(updatedAt = now))
         }
     }
 

@@ -115,6 +115,14 @@ class HomeyViewModel(application: Application) : AndroidViewModel(application) {
         _stack.value = _stack.value + screen
     }
 
+    /**
+     * 只有 [screen] 仍在栈顶时才返回。页面退出动画期间旧页面还在屏幕上，
+     * 用它可以避免连点「返回/保存」时多退一级。
+     */
+    fun backFrom(screen: Screen) {
+        if (_stack.value.lastOrNull() == screen) back()
+    }
+
     fun switchTab(tab: Screen) {
         _stack.value = listOf(tab)
     }
@@ -196,6 +204,10 @@ class HomeyViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch { repository.adjustQuantity(id, delta) }
     }
 
+    fun setQuantity(id: String, quantity: Int) {
+        viewModelScope.launch { repository.setQuantity(id, quantity.toDouble()) }
+    }
+
     fun setLevel(id: String, level: Int) {
         viewModelScope.launch { repository.setLevel(id, level) }
     }
@@ -212,14 +224,16 @@ class HomeyViewModel(application: Application) : AndroidViewModel(application) {
             say("先填一下名称")
             return
         }
+        // 先关闭页面再保存；页面已经不在栈顶（重复点击、退出动画中）就忽略
+        val screen = Screen.Edit(id)
+        if (_stack.value.lastOrNull() != screen) return
+        back()
         viewModelScope.launch {
             if (id == null) {
                 repository.addItem(draft)
-                back()
                 say("已添加「${draft.name.trim()}」")
             } else {
                 repository.updateSettings(id, draft)
-                back()
                 say("已保存")
             }
         }
