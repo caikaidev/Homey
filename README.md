@@ -1,4 +1,8 @@
-# Homey 家庭补给管家
+# 家小满（Homey）
+
+[![CI](https://github.com/caikaidev/Homey/actions/workflows/ci.yml/badge.svg)](https://github.com/caikaidev/Homey/actions/workflows/ci.yml)
+
+安装包 ID / 代码包名：`ian.dev.homey`
 
 > 不用记什么时候该买什么。打开 App，只看今天要处理的事。
 
@@ -10,7 +14,7 @@
 | 物品 | 全部物品，按分类筛选、搜索；右上角进入「数据与备份」 |
 | 详情 | 还够用几天；随手加减数量 / 更新余量；买到了；不再记录（可撤销） |
 | 添加 / 编辑 | 常用预设一键填好；3 种记录方式；分类、位置、提醒天数放在「更多设置」 |
-| 数据与备份 | 每日自动备份、选择备份文件夹、导出 JSON、从备份恢复（合并/覆盖，可撤回）、导出 CSV |
+| 提醒与备份 | 每日提醒开关与时间（默认 9:00）；每日自动备份、选择备份文件夹、导出 JSON、从备份恢复（合并/覆盖，可撤回）、导出 CSV |
 
 三种记录方式：
 
@@ -75,7 +79,7 @@
 ## 代码结构
 
 ```
-app/src/main/java/com/example/
+app/src/main/java/ian/dev/homey/
 ├── data/
 │   ├── model/        Entities.kt（Product/Inventory/StockLog/Todo）、Enums.kt
 │   ├── dao/          Daos.kt
@@ -84,7 +88,7 @@ app/src/main/java/com/example/
 │   └── backup/       BackupCodec（JSON 格式）、BackupManager（导出/恢复/自动备份/CSV）、BackupPrefs
 ├── domain/
 │   ├── prediction/   PredictionEngine.kt
-│   ├── worker/       RestockDailyWorker（每日提醒）、AutoBackupWorker（每日备份）
+│   ├── worker/       DailyReminderWorker（定点提醒，每次执行完预约明天）、AutoBackupWorker（每日备份）
 │   └── notification/
 └── ui/               HomeyViewModel、MainScreen、screens/、components/、theme/
 ```
@@ -93,7 +97,9 @@ app/src/main/java/com/example/
 
 ```bash
 ./gradlew assembleDebug
-./gradlew testDebugUnitTest   # PredictionEngineTest / MigrationTest / BackupTest
+./gradlew testDebugUnitTest   # PredictionEngine / ReminderSchedule / Migration / Backup / Repository
 ```
+
+每次 push 到 main 和每个 PR 都会在 GitHub Actions 上跑单元测试、打 debug 包，并检查 Room 结构文件是否已提交；debug APK 可在 Actions 页面下载。
 
 设计稿：见 Claude Design 画布（今天 / 物品 / 详情 / 添加 / 数据与备份 五个画板）。
