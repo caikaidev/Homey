@@ -16,8 +16,12 @@ val signingProperties = Properties().apply {
     propertiesFile.inputStream().use { load(it) }
   }
 }
-val releaseStoreFilePath: String? = signingProperties.getProperty("noticlaw.release.storeFile")
 
+/** 签名参数：本地从 local.properties 读，CI 从环境变量（GitHub Secrets）读。 */
+fun signingValue(propertyKey: String, envKey: String): String? =
+  signingProperties.getProperty(propertyKey) ?: providers.environmentVariable(envKey).orNull
+
+val releaseStoreFilePath: String? = signingValue("noticlaw.release.storeFile", "RELEASE_STORE_FILE")
 
 android {
   namespace = "ian.dev.homey"
@@ -37,9 +41,9 @@ android {
     if (releaseStoreFilePath != null) {
       create("release") {
         storeFile = file(releaseStoreFilePath)
-        storePassword = signingProperties.getProperty("noticlaw.release.storePassword")
-        keyAlias = signingProperties.getProperty("noticlaw.release.keyAlias")
-        keyPassword = signingProperties.getProperty("noticlaw.release.keyPassword")
+        storePassword = signingValue("noticlaw.release.storePassword", "RELEASE_STORE_PASSWORD")
+        keyAlias = signingValue("noticlaw.release.keyAlias", "RELEASE_KEY_ALIAS")
+        keyPassword = signingValue("noticlaw.release.keyPassword", "RELEASE_KEY_PASSWORD")
       }
     }
   }
