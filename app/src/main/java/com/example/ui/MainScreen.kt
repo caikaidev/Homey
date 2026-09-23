@@ -1,244 +1,133 @@
 package com.example.ui
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddCircle
-import androidx.compose.material.icons.filled.FactCheck
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Inventory2
-import androidx.compose.material.icons.outlined.AddCircleOutline
-import androidx.compose.material.icons.outlined.FactCheck
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Inventory2
-import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.NavigationRail
-import androidx.compose.material3.NavigationRailItem
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ui.screens.AddProductScreen
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.ui.screens.BackupScreen
+import com.example.ui.screens.DetailScreen
+import com.example.ui.screens.EditItemScreen
 import com.example.ui.screens.HomeScreen
 import com.example.ui.screens.InventoryScreen
-import com.example.ui.screens.ProductDetailScreen
-import com.example.ui.screens.TodoScreen
+import com.example.ui.theme.Homey
 
 @Composable
-fun MainScreen(
-    viewModel: SupplyViewModel,
-    modifier: Modifier = Modifier
-) {
-    val currentScreen by viewModel.currentScreen.collectAsState()
-    val selectedProductId by viewModel.selectedProductId.collectAsState()
-    val homeSummary by viewModel.homeSummary.collectAsState()
-    val userMessage by viewModel.userMessage.collectAsState()
+fun MainScreen(viewModel: HomeyViewModel) {
+    val stack by viewModel.stack.collectAsStateWithLifecycle()
+    val message by viewModel.message.collectAsStateWithLifecycle()
+    val snackbar = remember { SnackbarHostState() }
+    val screen = stack.last()
 
-    val snackbarHostState = remember { SnackbarHostState() }
-    val configuration = LocalConfiguration.current
-    val isWideScreen = configuration.screenWidthDp >= 600
+    BackHandler(enabled = stack.size > 1 || screen != Screen.Home) { viewModel.back() }
 
-    LaunchedEffect(userMessage) {
-        userMessage?.let {
-            snackbarHostState.showSnackbar(it)
-            viewModel.clearUserMessage()
-        }
-    }
-
-    if (currentScreen == "detail" && selectedProductId != null) {
-        ProductDetailScreen(
-            viewModel = viewModel,
-            productId = selectedProductId!!,
-            onBack = { viewModel.navigateTo("inventory") }
+    LaunchedEffect(message) {
+        val m = message ?: return@LaunchedEffect
+        val result = snackbar.showSnackbar(
+            message = m.text,
+            actionLabel = m.actionLabel,
+            duration = if (m.actionLabel != null) SnackbarDuration.Long else SnackbarDuration.Short
         )
-        return
+        if (result == SnackbarResult.ActionPerformed) m.action?.invoke()
+        viewModel.consumeMessage(m.key)
     }
 
-    if (isWideScreen) {
-        Row(modifier = Modifier.fillMaxSize()) {
-            NavigationRail(
-                containerColor = MaterialTheme.colorScheme.surface,
-                contentColor = MaterialTheme.colorScheme.onSurface
-            ) {
-                NavigationRailItem(
-                    selected = currentScreen == "home",
-                    onClick = { viewModel.navigateTo("home") },
-                    icon = {
-                        BadgedBox(
-                            badge = {
-                                if (homeSummary.urgentCount > 0) {
-                                    Badge { Text("${homeSummary.urgentCount}") }
-                                }
-                            }
-                        ) {
-                            Icon(if (currentScreen == "home") Icons.Default.Home else Icons.Outlined.Home, contentDescription = "首页")
-                        }
-                    },
-                    label = { Text("首页") }
+    val showTabs = screen == Screen.Home || screen == Screen.Inventory
+    Scaffold(
+        containerColor = Homey.colors.background,
+        snackbarHost = { SnackbarHost(snackbar) },
+        bottomBar = {
+            if (showTabs) {
+                BottomBar(
+                    current = screen,
+                    onHome = { viewModel.switchTab(Screen.Home) },
+                    onInventory = { viewModel.switchTab(Screen.Inventory) },
+                    onAdd = { viewModel.open(Screen.Edit(null)) }
                 )
-
-                NavigationRailItem(
-                    selected = currentScreen == "inventory",
-                    onClick = { viewModel.navigateTo("inventory") },
-                    icon = {
-                        Icon(if (currentScreen == "inventory") Icons.Default.Inventory2 else Icons.Outlined.Inventory2, contentDescription = "库存")
-                    },
-                    label = { Text("库存") }
-                )
-
-                NavigationRailItem(
-                    selected = currentScreen == "add",
-                    onClick = { viewModel.navigateTo("add") },
-                    icon = {
-                        Icon(if (currentScreen == "add") Icons.Default.AddCircle else Icons.Outlined.AddCircleOutline, contentDescription = "录入")
-                    },
-                    label = { Text("录入") }
-                )
-
-                NavigationRailItem(
-                    selected = currentScreen == "todo",
-                    onClick = { viewModel.navigateTo("todo") },
-                    icon = {
-                        Icon(if (currentScreen == "todo") Icons.Default.FactCheck else Icons.Outlined.FactCheck, contentDescription = "待办")
-                    },
-                    label = { Text("待办") }
-                )
-            }
-
-            Box(modifier = Modifier.weight(1f)) {
-                when (currentScreen) {
-                    "home" -> HomeScreen(viewModel = viewModel)
-                    "inventory" -> InventoryScreen(viewModel = viewModel)
-                    "add" -> AddProductScreen(viewModel = viewModel, onBack = { viewModel.navigateTo("home") })
-                    "todo" -> TodoScreen(viewModel = viewModel)
-                    else -> HomeScreen(viewModel = viewModel)
-                }
             }
         }
-    } else {
-        Scaffold(
-            snackbarHost = { SnackbarHost(snackbarHostState) },
-            bottomBar = {
-                NavigationBar(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    tonalElevation = 6.dp,
-                    modifier = Modifier.testTag("main_bottom_nav")
-                ) {
-                    NavigationBarItem(
-                        selected = currentScreen == "home",
-                        onClick = { viewModel.navigateTo("home") },
-                        icon = {
-                            BadgedBox(
-                                badge = {
-                                    if (homeSummary.urgentCount > 0) {
-                                        Badge { Text("${homeSummary.urgentCount}") }
-                                    }
-                                }
-                            ) {
-                                Icon(
-                                    imageVector = if (currentScreen == "home") Icons.Default.Home else Icons.Outlined.Home,
-                                    contentDescription = "首页",
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
-                        },
-                        label = { Text("首页", fontSize = 12.sp) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.primary,
-                            selectedTextColor = MaterialTheme.colorScheme.primary,
-                            indicatorColor = MaterialTheme.colorScheme.primaryContainer
-                        )
-                    )
-
-                    NavigationBarItem(
-                        selected = currentScreen == "inventory",
-                        onClick = { viewModel.navigateTo("inventory") },
-                        icon = {
-                            Icon(
-                                imageVector = if (currentScreen == "inventory") Icons.Default.Inventory2 else Icons.Outlined.Inventory2,
-                                contentDescription = "库存",
-                                modifier = Modifier.size(24.dp)
-                            )
-                        },
-                        label = { Text("库存", fontSize = 12.sp) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.primary,
-                            selectedTextColor = MaterialTheme.colorScheme.primary,
-                            indicatorColor = MaterialTheme.colorScheme.primaryContainer
-                        )
-                    )
-
-                    NavigationBarItem(
-                        selected = currentScreen == "add",
-                        onClick = { viewModel.navigateTo("add") },
-                        icon = {
-                            Icon(
-                                imageVector = if (currentScreen == "add") Icons.Default.AddCircle else Icons.Outlined.AddCircleOutline,
-                                contentDescription = "录入",
-                                modifier = Modifier.size(24.dp)
-                            )
-                        },
-                        label = { Text("录入", fontSize = 12.sp) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.primary,
-                            selectedTextColor = MaterialTheme.colorScheme.primary,
-                            indicatorColor = MaterialTheme.colorScheme.primaryContainer
-                        )
-                    )
-
-                    NavigationBarItem(
-                        selected = currentScreen == "todo",
-                        onClick = { viewModel.navigateTo("todo") },
-                        icon = {
-                            Icon(
-                                imageVector = if (currentScreen == "todo") Icons.Default.FactCheck else Icons.Outlined.FactCheck,
-                                contentDescription = "待办",
-                                modifier = Modifier.size(24.dp)
-                            )
-                        },
-                        label = { Text("待办", fontSize = 12.sp) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.primary,
-                            selectedTextColor = MaterialTheme.colorScheme.primary,
-                            indicatorColor = MaterialTheme.colorScheme.primaryContainer
-                        )
-                    )
-                }
-            },
-            modifier = modifier.fillMaxSize()
-        ) { innerPadding ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-            ) {
-                when (currentScreen) {
-                    "home" -> HomeScreen(viewModel = viewModel)
-                    "inventory" -> InventoryScreen(viewModel = viewModel)
-                    "add" -> AddProductScreen(viewModel = viewModel, onBack = { viewModel.navigateTo("home") })
-                    "todo" -> TodoScreen(viewModel = viewModel)
-                    else -> HomeScreen(viewModel = viewModel)
-                }
+    ) { padding ->
+        Box(Modifier.fillMaxSize().padding(padding)) {
+            when (screen) {
+                Screen.Home -> HomeScreen(viewModel)
+                Screen.Inventory -> InventoryScreen(viewModel)
+                is Screen.Detail -> DetailScreen(viewModel, screen.id)
+                is Screen.Edit -> EditItemScreen(viewModel, screen.id)
+                Screen.Backup -> BackupScreen(viewModel)
             }
+        }
+    }
+}
+
+@Composable
+private fun BottomBar(current: Screen, onHome: () -> Unit, onInventory: () -> Unit, onAdd: () -> Unit) {
+    val c = Homey.colors
+    Column(Modifier.fillMaxWidth().background(c.surface).windowInsetsPadding(WindowInsets.navigationBars)) {
+        HorizontalDivider(color = c.line)
+        Row(
+            modifier = Modifier.fillMaxWidth().height(76.dp).padding(horizontal = 24.dp),
+            horizontalArrangement = Arrangement.SpaceAround,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            TabItem("今天", current == Screen.Home, Icons.Filled.Home, Icons.Outlined.Home, onHome)
+            FilledIconButton(
+                onClick = onAdd,
+                modifier = Modifier.size(56.dp),
+                shape = RoundedCornerShape(18.dp),
+                colors = IconButtonDefaults.filledIconButtonColors(containerColor = c.coral, contentColor = c.onCoral)
+            ) { Icon(Icons.Filled.Add, contentDescription = "添加物品", modifier = Modifier.size(28.dp)) }
+            TabItem("物品", current == Screen.Inventory, Icons.Filled.Inventory2, Icons.Outlined.Inventory2, onInventory)
+        }
+    }
+}
+
+@Composable
+private fun TabItem(label: String, selected: Boolean, on: ImageVector, off: ImageVector, onClick: () -> Unit) {
+    val c = Homey.colors
+    val color = if (selected) c.green else c.muted
+    TextButton(onClick = onClick, modifier = Modifier.width(80.dp).height(56.dp)) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Icon(if (selected) on else off, contentDescription = null, tint = color)
+            Text(label, fontSize = 11.sp, color = color, fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium)
         }
     }
 }

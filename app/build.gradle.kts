@@ -17,8 +17,8 @@ android {
     applicationId = "com.aistudio.familysupply.restock"
     minSdk = 24
     targetSdk = 36
-    versionCode = 1
-    versionName = "1.0"
+    versionCode = 2
+    versionName = "1.1"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
@@ -61,6 +61,11 @@ android {
     includeInApk = false
     includeInBundle = true
   }
+}
+
+// Room 导出每个数据库版本的结构到 app/schemas/，请提交进仓库，用于核对迁移。
+ksp {
+  arg("room.schemaLocation", "$projectDir/schemas")
 }
 
 // Configure the Secrets Gradle Plugin to use .env and .env.example files
