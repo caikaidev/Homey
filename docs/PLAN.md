@@ -1,18 +1,18 @@
-# 改造计划：家小满（纯 Android）→ 牛牛照护（Web + Android）
+# 改造计划：家小满（纯 Android）→ 崽崽小看板（Web + Android）
 
-> 依据：《牛牛照护看板 · MVP 开发计划》。本文件说明在**现有 Homey 仓库**上怎么落地，阶段划分沿用原计划 P0–P4。
+> 依据：`reference/mvp-dev-plan.md`（原 MVP 开发计划）与 `REQUIREMENTS.md`（需求与验收清单，最终裁判）。本文件说明在**现有 Homey 仓库**上怎么落地，阶段划分沿用原计划 P0–P4。
 > 状态：已定稿（2026-10-09），开工按本文件执行。
 
 ## 已确认的决策
 
 | # | 决策 |
 | --- | --- |
-| 1 | **补给/库存功能全部移除**（物品、库存、保质期、备份恢复、CSV 导出等代码与 Room 表一并删除，不做数据迁移） |
-| 2 | **改名改包名**：App 名「牛牛照护」，包名 `ian.dev.niuniu`（与旧 App 并存，旧 App 由用户手动卸载） |
+| 1 | **现有功能整体推翻重做**：补给/库存、备份恢复、CSV 导出等代码与 Room 表全部删除，不做数据迁移 |
+| 2 | **改名改包名**：产品名「崽崽小看板」，包名 `ian.dev.zaizai`；**宝宝昵称可自定义**（默认“崽崽”），为后续开源准备，代码不含任何具体家庭信息 |
 | 3 | **鉴权**：Web 走 Cloudflare Access；App 调 `/api/*` 用 FAMILY_KEY。**所有第三方 API Key 只放在 Worker Secrets，客户端（Web/App）一律不持有** |
 | 3' | **AI 解析改用 Gemini API**（替代原计划的 Workers AI），模型 `gemini-3.8-flash`，由 Worker 服务端调用 |
 | 4 | **前端**：Hono（Worker 路由）+ 原生 HTML/CSS/JS（ES Module，无构建步骤） |
-| 5 | 参考原型 `niuniu-care/` 与需求文档 `niuniu-care-mvp_0_8cpf.md` 放进仓库 `docs/reference/` |
+| 5 | 需求文档由我重写为 `docs/REQUIREMENTS.md`；交互原型用 Claude Design 画，原 Web 原型代码不再依赖 |
 
 ---
 
@@ -34,7 +34,7 @@ Android 端保留：Gradle 工程、CI/签名发布流程、Compose 主题与通
 
 ```
 Homey/
-├── app/                 # Android「牛牛照护」（位置不动，包名改为 ian.dev.niuniu）
+├── app/                 # Android「崽崽小看板」（位置不动，包名改为 ian.dev.zaizai）
 ├── web/                 # Cloudflare Worker + 静态前端
 │   ├── wrangler.toml    # D1 binding、assets 目录、placement、GEMINI_MODEL 变量
 │   ├── migrations/      # 0001_init.sql 起，只追加不改旧文件
@@ -50,7 +50,8 @@ Homey/
 ├── docs/
 │   ├── PLAN.md          # 本文件
 │   ├── API.md           # P1 定稿的 API 契约（Web 与 App 共用，定了不改）
-│   └── reference/       # 原型代码与 MVP 需求文档
+│   ├── REQUIREMENTS.md  # 需求 + 验收清单
+│   └── reference/       # 原始 MVP 开发计划
 └── .github/workflows/   # android / web 两个 job，按路径触发
 ```
 
@@ -66,6 +67,7 @@ Homey/
 - `tasks`：`id TEXT PK (uuid)`, `title`, `kind`（`supplement`，预留 `medicine`）, `schedule_json`, `priority`, `status`（active/paused/archived）, `note`, `created_by`, `created_at`, `updated_at`
 - `completions`：`id`, `task_id`, `biz_date`（YYYY-MM-DD）, `slot`（"08:00"）, `result`（done/skipped）, `reason`, `recorded_by`, `recorded_at`, `undone_at`
   - `UNIQUE(task_id, biz_date, slot)` 保证幂等；撤销为**软删**（写 `undone_at`，保留审计），再次登记时复用该行清空 `undone_at`
+- `settings`：`key TEXT PK, value TEXT, updated_at`。P1 用到 `child_nickname`（默认“崽崽”）、`members`（JSON：邮箱→显示名、照护人名单）。
 - 约定：字符串 UUID、枚举存字符串且不改名、时间存毫秒 UTC。
 
 ### 2.2 排期与实例
@@ -78,13 +80,14 @@ Homey/
 
 | 方法 | 说明 |
 | --- | --- |
-| `GET /api/board?date=` | `{date, today:[实例+状态], tomorrow:[只读], serverTime}` |
+| `GET /api/board?date=` | `{date, nickname, today:[实例+状态], tomorrow:[只读], serverTime}` |
 | `GET/POST /api/tasks`，`PATCH /api/tasks/:id/status` | 事项 CRUD + 暂停/恢复/归档 |
 | `PATCH /api/tasks/:id` | 改名/改排期（补充项） |
 | `POST /api/checkin` | `{task_id, date, slot}`，幂等：已存在返回原记录 200 |
 | `POST /api/skip` | 同上 + `reason` |
 | `POST /api/undo` | 撤销自己 2 分钟内的记录（补充项，P3 依赖） |
 | `GET /api/history?days=14` | 带记录人 |
+| `GET/PATCH /api/settings` | 昵称、家庭成员显示名（App 只读） |
 | `POST /api/parse` | P2 |
 
 响应 JSON，错误统一 `{error:{code,message}}`。契约写进 `docs/API.md`，Worker 测试按它断言。
@@ -100,7 +103,7 @@ Homey/
 ## 3. 分阶段执行
 
 ### P0 — 地基 + 清场
-- **Android 清场**：删除补给相关代码、Room 实体/迁移/schema、备份功能及对应测试；改名「牛牛照护」、包名 `ian.dev.niuniu`；留一个能编译、CI 通过的空壳首页。版本号重置为 2.0（新 App）。
+- **Android 清场**：删除补给相关代码、Room 实体/迁移/schema、备份功能及对应测试；改名「崽崽小看板」、包名 `ian.dev.zaizai`；留一个能编译、CI 通过的空壳首页。版本号重置为 2.0（新 App）。
 - 建 `web/`：`wrangler.toml`、`0001_init.sql`、Hono 最小 Worker（鉴权后 `/api/ping` 返回 200）、空白静态页。
 - CI：新增 web job（`npm ci && npm run typecheck && npm test`），android job 加 `paths` 过滤；release workflow 适配新包名。
 - 需要你在 Cloudflare Dashboard 做（我会给逐步清单）：建 D1 拿 `database_id`、设 Secrets、连 Workers Builds（root=`web/`）、配 Access 应用与 `/api/*` Bypass。
@@ -134,5 +137,7 @@ Homey/
 
 ## 4. 开工前需要的输入
 
-- [ ] 把 `niuniu-care/`（原型）和 `niuniu-care-mvp_0_8cpf.md` 放进 `docs/reference/`（push 到 `plan/care-board` 分支或在会话中上传）
-- [ ] Cloudflare：D1 `database_id`、准备好 `FAMILY_KEY`、Gemini API Key（P2 前即可）
+- [x] 需求文档：`docs/REQUIREMENTS.md`
+- [x] 原始计划：`docs/reference/mvp-dev-plan.md`
+- [x] 交互原型：Claude Design 画布「崽崽小看板 原型」 https://claude.ai/artifact/5zp8C9McEk7dux5uGetjdC（9 屏：Web 今日/新建/事项/记录/设置，App 今日/离线/小组件/首次设置）
+- [ ] Cloudflare：D1 `database_id`、`FAMILY_KEY`、Gemini API Key（P2 前即可）
