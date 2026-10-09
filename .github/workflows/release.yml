@@ -54,9 +54,9 @@ jobs:
           AAB=app/build/outputs/bundle/release/app-release.aab
           test -f "$APK" || { echo "::error::Signed APK not found (signing not configured?)"; exit 1; }
           mkdir -p dist
-          cp "$APK" "dist/jiaxiaoman-${GITHUB_REF_NAME}.apk"
-          cp "$AAB" "dist/jiaxiaoman-${GITHUB_REF_NAME}.aab"
-          "$ANDROID_HOME"/build-tools/*/apksigner verify --print-certs "dist/jiaxiaoman-${GITHUB_REF_NAME}.apk" | head -5 || true
+          cp "$APK" "dist/zaizai-board-${GITHUB_REF_NAME}.apk"
+          cp "$AAB" "dist/zaizai-board-${GITHUB_REF_NAME}.aab"
+          "$ANDROID_HOME"/build-tools/*/apksigner verify --print-certs "dist/zaizai-board-${GITHUB_REF_NAME}.apk" | head -5 || true
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2

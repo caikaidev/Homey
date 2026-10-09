@@ -1,0 +1,28 @@
+# 崽崽小看板 · Cloudflare Worker
+# 部署：Workers Builds 连接 GitHub，Root directory = web/，push main 自动部署。
+# 密钥（不进仓库）：在 Dashboard → Workers → Settings → Variables and Secrets 里设置
+#   FAMILY_KEY      App 调用 /api/* 的家庭口令
+#   GEMINI_API_KEY  P2 起使用
+name = "zaizai-board"
+main = "src/index.ts"
+compatibility_date = "2026-09-30"
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api/*"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "zaizai-board"
+# 建库后替换：npx wrangler d1 create zaizai-board
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"
+
+[vars]
+# Cloudflare Access：团队域名（如 https://<team>.cloudflareaccess.com）与应用 AUD。
+# 留空则不接受 Access 登录，只能用 FAMILY_KEY。
+ACCESS_TEAM_DOMAIN = ""
+ACCESS_AUD = ""
+GEMINI_MODEL = "gemini-3.8-flash"

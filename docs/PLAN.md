@@ -103,7 +103,7 @@ Homey/
 ## 3. 分阶段执行
 
 ### P0 — 地基 + 清场
-- **Android 清场**：删除补给相关代码、Room 实体/迁移/schema、备份功能及对应测试；改名「崽崽小看板」、包名 `ian.dev.zaizai`；留一个能编译、CI 通过的空壳首页。版本号重置为 2.0（新 App）。
+- **Android 清场**：删除补给相关代码、Room 实体/迁移/schema、备份功能及对应测试；改名「崽崽小看板」、包名 `ian.dev.zaizai`；留一个能编译、CI 通过的空壳首页。版本号从 0.1 起（新 App）。
 - 建 `web/`：`wrangler.toml`、`0001_init.sql`、Hono 最小 Worker（鉴权后 `/api/ping` 返回 200）、空白静态页。
 - CI：新增 web job（`npm ci && npm run typecheck && npm test`），android job 加 `paths` 过滤；release workflow 适配新包名。
 - 需要你在 Cloudflare Dashboard 做（我会给逐步清单）：建 D1 拿 `database_id`、设 Secrets、连 Workers Builds（root=`web/`）、配 Access 应用与 `/api/*` Bypass。
