@@ -22,7 +22,7 @@ data class FetchedBoard(val board: Board, val raw: String, val receivedAt: Long)
 
 /**
  * 照护人端只用到的几个接口，见 docs/API.md。用家庭口令鉴权，记录人放在 `X-Recorder`。
- * 不跟随重定向：Access 没给 `/api/*` 放行时会被重定向到登录页，这里直接报错说清楚。
+ * 不跟随重定向：Access 没给 api 路径放行时会被重定向到登录页，这里直接报错说清楚。
  */
 class ApiClient(
     private val base: String,

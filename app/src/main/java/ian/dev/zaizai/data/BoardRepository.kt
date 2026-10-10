@@ -75,7 +75,7 @@ class BoardRepository(private val app: Context, private val store: LocalStore = 
         try {
             upload(api)
             val fetched = api.board()
-            val offset = if (fetched.board.serverTime > 0) fetched.board.serverTime - fetched.receivedAt else 0
+            val offset = if (fetched.board.serverTime > 0) fetched.board.serverTime - fetched.receivedAt else 0L
             store.writeSnapshot(fetched.raw, fetched.receivedAt, offset)
             snapshot = Snapshot(fetched.board, fetched.receivedAt, offset)
             publish { it.copy(offline = false, syncing = false, problem = null) }
