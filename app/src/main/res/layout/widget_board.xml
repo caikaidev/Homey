@@ -29,17 +29,40 @@
         android:textSize="56sp"
         android:textStyle="bold" />
 
-    <TextClock
-        android:id="@+id/widget_date"
+    <!-- 日期 + 喇叭：点喇叭念出今天还剩的事，不用打开 App -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:ellipsize="end"
-        android:format12Hour="M月d日 EEEE"
-        android:format24Hour="M月d日 EEEE"
-        android:gravity="center"
-        android:maxLines="1"
-        android:textColor="@color/widget_muted"
-        android:textSize="18sp" />
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <!-- 左边留出和喇叭一样宽的空，日期才居中（小组件里不能用 View，用 FrameLayout 占位） -->
+        <FrameLayout
+            android:layout_width="48dp"
+            android:layout_height="1dp" />
+
+        <TextClock
+            android:id="@+id/widget_date"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:format12Hour="M月d日 EEEE"
+            android:format24Hour="M月d日 EEEE"
+            android:gravity="center"
+            android:maxLines="1"
+            android:textColor="@color/widget_muted"
+            android:textSize="18sp" />
+
+        <ImageView
+            android:id="@+id/widget_speak"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="@drawable/widget_speak_bg"
+            android:contentDescription="念一下今天的事"
+            android:padding="10dp"
+            android:src="@drawable/ic_speak" />
+    </LinearLayout>
 
     <!-- 名称牌：待做是橙色底，大字写事项名；做完是绿色底，换成蹦跳的小牛崽 -->
     <LinearLayout

@@ -8,4 +8,6 @@
     <color name="widget_pending_soft">#FFFDEBDC</color>
     <color name="widget_done_soft">#FFDCEFE9</color>
     <color name="widget_done">#FF134A40</color>
+    <color name="widget_speak">#FFC2410C</color>
+    <color name="widget_on_speak">#FFFFFFFF</color>
 </resources>

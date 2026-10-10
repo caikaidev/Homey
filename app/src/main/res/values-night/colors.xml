@@ -7,4 +7,6 @@
     <color name="widget_pending_soft">#FF45230F</color>
     <color name="widget_done_soft">#FF173A31</color>
     <color name="widget_done">#FF8AD2BF</color>
+    <color name="widget_speak">#FFFF9A62</color>
+    <color name="widget_on_speak">#FF3B1300</color>
 </resources>

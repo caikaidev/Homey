@@ -6,6 +6,8 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.os.Handler
+import android.os.Looper
 import android.util.TypedValue
 import android.view.View
 import android.widget.RemoteViews
@@ -16,9 +18,27 @@ import ian.dev.zaizai.ZaizaiApp
 import ian.dev.zaizai.data.BizDate
 import ian.dev.zaizai.data.BoardLogic
 import ian.dev.zaizai.data.BoardState
+import java.util.concurrent.atomic.AtomicBoolean
 
-/** 桌面小组件：大时钟 + 大字显示下一件该做的事，可以代替系统时钟。内容来自本机缓存，每次看板状态变化时刷新；点击进入 App（会顺便同步）。 */
+/** 桌面小组件：大时钟 + 大字显示下一件该做的事，可以代替系统时钟；喇叭按钮念出今天还剩的事。内容来自本机缓存，每次看板状态变化时刷新；点击进入 App（会顺便同步）。 */
 class BoardWidgetProvider : AppWidgetProvider() {
+    override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action != BoardWidget.ACTION_SPEAK) return super.onReceive(context, intent)
+        val app = context.applicationContext as ZaizaiApp
+        val board = app.repository.state.value.board
+        val text = when {
+            board == null -> "还没同步，请打开 App 看看"
+            board.date != BizDate.date(app.repository.serverNow()) -> "看板还没换到今天，请打开 App 看看"
+            else -> BoardLogic.speech(board)
+        }
+        // 等念完再结束广播，免得进程半路被回收；最多等 30 秒
+        val result = goAsync()
+        val finished = AtomicBoolean(false)
+        val finish = { if (finished.compareAndSet(false, true)) result.finish() }
+        Handler(Looper.getMainLooper()).postDelayed(finish, 30_000)
+        app.voice.speak(text, finish)
+    }
+
     override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) {
         val state = (context.applicationContext as ZaizaiApp).repository.state.value
         manager.updateAppWidget(ids, BoardWidget.views(context, state))
@@ -26,6 +46,8 @@ class BoardWidgetProvider : AppWidgetProvider() {
 }
 
 object BoardWidget {
+    const val ACTION_SPEAK = "ian.dev.zaizai.widget.SPEAK"
+
     fun render(context: Context, state: BoardState) {
         val manager = AppWidgetManager.getInstance(context) ?: return
         val ids = manager.getAppWidgetIds(ComponentName(context, BoardWidgetProvider::class.java))
@@ -41,6 +63,12 @@ object BoardWidget {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
         views.setOnClickPendingIntent(R.id.widget_root, open)
+        val speak = PendingIntent.getBroadcast(
+            context, 1,
+            Intent(context, BoardWidgetProvider::class.java).setAction(ACTION_SPEAK),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        views.setOnClickPendingIntent(R.id.widget_speak, speak)
 
         val board = state.board
         if (board == null) {
