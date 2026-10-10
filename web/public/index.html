@@ -2,40 +2,45 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F3F5F0">
 <title>崽崽小看板</title>
-<style>
-  :root { --bg: #F3F5F0; --ink: #1C2420; --muted: #55605A; --line: #DDE3DC; --ok: #134A40; --warn: #9A3412; }
-  body { margin: 0; background: var(--bg); color: var(--ink); font-family: system-ui, -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; }
-  main { max-width: 480px; margin: 0 auto; padding: 32px 16px; display: flex; flex-direction: column; gap: 12px; }
-  h1 { margin: 0; font-size: 26px; }
-  .card { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 16px; }
-  .muted { color: var(--muted); }
-</style>
+<link rel="stylesheet" href="/app.css">
+<script type="module" src="/js/app.js"></script>
 </head>
 <body>
-<main>
-  <h1>崽崽小看板</h1>
-  <p class="muted">正在搭建中（P0）。</p>
-  <div class="card" id="status">正在检查连接…</div>
-</main>
-<script type="module">
-  const el = document.getElementById('status');
-  try {
-    const res = await fetch('/api/ping', { credentials: 'same-origin' });
-    if (res.ok) {
-      const data = await res.json();
-      el.textContent = `已连接，当前身份：${data.actor.name}`;
-      el.style.color = 'var(--ok)';
-    } else {
-      const body = await res.json().catch(() => null);
-      el.textContent = `未登录（${res.status}）${body?.error?.message ? '：' + body.error.message : ''}`;
-      el.style.color = 'var(--warn)';
-    }
-  } catch {
-    el.textContent = '连接失败';
-    el.style.color = 'var(--warn)';
-  }
-</script>
+<div class="shell">
+  <main id="view" class="view" aria-live="polite"><p class="muted pad">加载中…</p></main>
+  <nav class="tabs" aria-label="主导航">
+    <a href="#/today" data-tab="today">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>今日</a>
+    <a href="#/tasks" data-tab="tasks">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></svg>事项</a>
+    <a href="#/new" data-tab="new" class="tab-new" aria-label="新建事项">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></a>
+    <a href="#/history" data-tab="history">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4h4M12 8v4l3 2"/></svg>记录</a>
+    <a href="#/settings" data-tab="settings">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 0 0-2-1.2L14 3h-4l-.5 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 2 1.2L10 21h4l.5-2.6a7 7 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2z"/></svg>设置</a>
+  </nav>
+</div>
+<div id="toast" class="toast" role="status" hidden></div>
+<dialog id="skip-dialog" class="sheet">
+  <form method="dialog">
+    <h2>跳过“<span data-title></span>”</h2>
+    <p class="muted">选一个原因，或者自己写：</p>
+    <div class="chips" data-reasons>
+      <button type="button" class="chip" value="外出没带">外出没带</button>
+      <button type="button" class="chip" value="宝宝不舒服">宝宝不舒服</button>
+      <button type="button" class="chip" value="已经吃过了">已经吃过了</button>
+      <button type="button" class="chip" value="医生说先停">医生说先停</button>
+    </div>
+    <label class="field">原因<input name="reason" maxlength="100" required autocomplete="off"></label>
+    <div class="row">
+      <button value="cancel" formnovalidate class="btn ghost">取消</button>
+      <button value="ok" class="btn dark grow">确定跳过</button>
+    </div>
+  </form>
+</dialog>
 </body>
 </html>

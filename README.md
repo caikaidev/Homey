@@ -16,6 +16,7 @@
 
 - [需求与验收清单](docs/REQUIREMENTS.md)（最终裁判）
 - [改造与开发计划](docs/PLAN.md)
+- [API 契约](docs/API.md)（Web 与 App 共用）
 - [部署指南](docs/DEPLOY.md)
 
 ## 本地开发
