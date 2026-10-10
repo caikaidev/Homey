@@ -34,7 +34,9 @@ app.all('*', (c) => c.env.ASSETS.fetch(c.req.raw));
 
 app.onError((err, c) => {
   console.error(err);
-  return apiError(c, 500, 'internal', '服务器出错了');
+  // 只有通过鉴权的请求才会走到数据库，带上原因方便排查（如“no such table”），不含密钥。
+  const detail = err instanceof Error ? err.message : String(err);
+  return apiError(c, 500, 'internal', `服务器出错了：${detail.slice(0, 300)}`);
 });
 
 export default app;

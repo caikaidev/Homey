@@ -122,6 +122,7 @@ export async function editor(el, taskId) {
             </section>`
       }
       <div data-form>${form ? drawForm() : ''}</div>`;
+    el.classList.add('form-narrow');
   }
 
   /** 改表单时只重画描述和预览，避免输入框失去焦点。 */

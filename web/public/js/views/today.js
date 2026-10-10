@@ -66,7 +66,7 @@ export async function today(el) {
           <span class="small muted">共 ${b.today.length} 件</span>
         </div>
       </header>
-      ${b.today.length ? items : `<div class="card dashed"><span class="muted">今天没有要做的事。</span><a class="btn dark" href="#/new">新建事项</a></div>`}
+      ${b.today.length ? `<div class="cards">${items}</div>` : `<div class="card dashed"><span class="muted">今天没有要做的事。</span><a class="btn dark" href="#/new">新建事项</a></div>`}
       <h2 class="section-title">明天 · ${md(b.tomorrow.date)} <span class="tag">只读</span></h2>
       <div class="card dashed">${tomorrow}</div>`;
   }

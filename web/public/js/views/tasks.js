@@ -24,7 +24,7 @@ export async function tasks(el) {
       <h2 class="section-title">进行中 · ${active.length}</h2>
       ${
         active.length
-          ? active
+          ? '<div class="cards">' + active
               .map(
                 (t) => `<article class="card">
                   <div class="item"><div class="body"><div class="title">${esc(t.title)}</div><div class="sub">${esc(t.describe)}</div>
@@ -34,13 +34,13 @@ export async function tasks(el) {
                     <button type="button" class="btn sm ghost" data-status="archived" data-id="${esc(t.id)}" data-title="${esc(t.title)}">归档</button>
                   </div></article>`,
               )
-              .join('')
+              .join('') + '</div>'
           : '<div class="card dashed muted">还没有进行中的事项。</div>'
       }
       ${
         paused.length
           ? `<h2 class="section-title">已暂停 · ${paused.length}</h2>
-            ${paused
+            <div class="cards">${paused
               .map(
                 (t) => `<article class="card paused">
                   <div class="item"><div class="body"><div class="title" style="color:var(--ink-2)">${esc(t.title)}</div>
@@ -50,7 +50,7 @@ export async function tasks(el) {
                     <button type="button" class="btn sm ghost" data-status="archived" data-id="${esc(t.id)}" data-title="${esc(t.title)}">归档</button>
                   </div></article>`,
               )
-              .join('')}`
+              .join('')}</div>`
           : ''
       }
       ${

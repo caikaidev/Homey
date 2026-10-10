@@ -47,7 +47,7 @@ svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width:
 /* 页头 */
 .head { display: flex; flex-direction: column; gap: 6px; padding: 4px 4px 4px; }
 .head h1 { font-size: 26px; font-weight: 700; letter-spacing: .5px; }
-.head-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; }
+.head-row { flex-direction: row; display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; }
 .back { width: 44px; height: 44px; margin-left: -10px; display: inline-flex; align-items: center; justify-content: center; color: var(--ink); border-radius: 12px; }
 .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 500; padding: 4px 10px; border-radius: 999px; }
 .pill.warn { background: var(--warn-bg); color: var(--warn); }
@@ -142,7 +142,37 @@ svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width:
 .tabs .tab-new, .tabs .tab-new.on { color: #fff; }
 .tabs .tab-new { justify-self: center; width: 48px; height: 48px; border-radius: 16px; background: var(--ink); color: #fff; padding: 0; }
 .tabs .tab-new svg { width: 24px; height: 24px; stroke-width: 2.4; }
-@media (min-width: 560px) { .tabs { left: 50%; right: auto; width: 520px; transform: translateX(-50%); border-left: 1px solid var(--line); border-right: 1px solid var(--line); } }
+
+/* 卡片列表：手机一列，宽屏两列 */
+.cards { display: flex; flex-direction: column; gap: 12px; }
+.tab-label { display: none; }
+
+/* 平板：内容放宽，底部导航跟内容同宽 */
+@media (min-width: 640px) {
+  .shell { max-width: 720px; }
+  .tabs { left: 50%; right: auto; width: 720px; transform: translateX(-50%); border-left: 1px solid var(--line); border-right: 1px solid var(--line); }
+}
+
+/* 电脑：左侧竖排导航，事项卡片两列 */
+@media (min-width: 960px) {
+  .shell { max-width: 1160px; display: grid; grid-template-columns: 216px minmax(0, 1fr); align-items: start; gap: 32px; padding: 0 24px; }
+  .view { padding: 40px 0 48px; max-width: 900px; width: 100%; }
+  .tabs {
+    position: sticky; top: 0; order: -1; left: auto; transform: none; width: auto; height: 100dvh;
+    display: flex; flex-direction: column; align-items: stretch; gap: 4px; padding: 40px 0;
+    background: transparent; border: none;
+  }
+  .tabs a { flex-direction: row; justify-content: flex-start; gap: 12px; font-size: 16px; padding: 10px 14px; border-radius: 12px; }
+  .tabs a:hover { background: #E6EAE4; }
+  .tabs a.on { background: #fff; box-shadow: 0 0 0 1px var(--line); }
+  .tabs .tab-new { order: -1; width: auto; height: 48px; justify-self: auto; justify-content: center; margin-bottom: 16px; padding: 0 14px; font-weight: 700; }
+  .tabs .tab-new:hover, .tabs .tab-new.on { background: #000; box-shadow: none; }
+  .tab-label { display: inline; }
+  .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+  .head h1 { font-size: 30px; }
+  .form-narrow { max-width: 720px; }
+  .toast { bottom: 32px; }
+}
 
 .toast { position: fixed; left: 50%; bottom: calc(88px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 10; background: var(--ink); color: #fff; padding: 10px 16px; border-radius: 12px; font-size: 15px; max-width: calc(100% - 32px); box-shadow: 0 6px 20px rgba(0,0,0,.18); }
 

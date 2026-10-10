@@ -35,7 +35,7 @@ export async function history(el) {
       <div class="stat"><span class="k">跳过</span><span class="v">${count('skipped')}</span></div>
       <div class="stat"><span class="k">未登记</span><span class="v" style="color:var(--warn)">${count('missed')}</span></div>
     </div>
-    ${data.days
+    <div class="cards">${data.days
       .filter((d) => d.items.length)
       .map(
         (d) => `<section class="stack" style="gap:6px">
@@ -48,5 +48,5 @@ export async function history(el) {
             .join('')}</div>
         </section>`,
       )
-      .join('') || '<div class="card dashed muted">最近还没有记录。</div>'}`;
+      .join('') || '<div class="card dashed muted">最近还没有记录。</div>'}</div>`;
 }
