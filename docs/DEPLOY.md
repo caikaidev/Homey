@@ -13,6 +13,8 @@ npx wrangler d1 create <数据库名>   # 也可以在 Dashboard 手动建，名
 把 `database_id` 和数据库名分别填进 `web/wrangler.toml` 的 `database_id`、`database_name`，提交到 main。
 `database_id` 不是密钥，可以进仓库。
 
+> 一定要用**新建的空库**。复用其他项目用过的库时，如果里面已有同名迁移记录（如 `0001_init.sql`），本项目的建表会被当成已执行而跳过，接口会报 `no such table`。
+
 建表不用手动执行：Workers Builds 每次部署都会先跑 `npm run deploy`，
 它会先执行 `wrangler d1 migrations apply DB --remote`（只跑还没跑过的迁移），再部署 Worker。
 
