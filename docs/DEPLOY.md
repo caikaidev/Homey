@@ -13,13 +13,8 @@ npx wrangler d1 create <数据库名>   # 也可以在 Dashboard 手动建，名
 把 `database_id` 和数据库名分别填进 `web/wrangler.toml` 的 `database_id`、`database_name`，提交到 main。
 `database_id` 不是密钥，可以进仓库。
 
-然后建表：
-
-```bash
-npm run db:migrate:remote
-```
-
-以后新增迁移文件时再跑一次这条命令（建议在合并含迁移的 PR 后手动执行）。
+建表不用手动执行：Workers Builds 每次部署都会先跑 `npm run deploy`，
+它会先执行 `wrangler d1 migrations apply DB --remote`（只跑还没跑过的迁移），再部署 Worker。
 
 ## 2. 连接 GitHub 自动部署（Workers Builds）
 
@@ -31,8 +26,13 @@ Dashboard → Workers & Pages → Create → Import a repository → 选本仓�
 | Production branch | `main` |
 | Root directory | `web` |
 | Build command | `npm ci` |
-| Deploy command | `npx wrangler deploy` |
+| Deploy command | `npm run deploy`（先建表/迁移，再部署） |
 | Build watch paths | `web/**`（只改 Android 时不触发部署） |
+| Non-production branch deploy command | 保持默认 `npx wrangler versions upload`（**不要**改成 `npm run deploy`，否则分支预览也会改正式数据库） |
+
+> 如果构建日志在迁移这一步报权限错误（如 `Authentication error`、`not authorized`），
+> 说明构建用的 API Token 没有 D1 权限：到 Worker → Settings → Builds → API token，
+> 换成一个包含 **Account / D1 / Edit** 和 **Workers Scripts / Edit** 的 Token，再点 Retry build。
 
 ## 3. 设置密钥
 
