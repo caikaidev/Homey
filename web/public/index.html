@@ -28,7 +28,8 @@
       el.textContent = `已连接，当前身份：${data.actor.name}`;
       el.style.color = 'var(--ok)';
     } else {
-      el.textContent = `未登录（${res.status}）`;
+      const body = await res.json().catch(() => null);
+      el.textContent = `未登录（${res.status}）${body?.error?.message ? '：' + body.error.message : ''}`;
       el.style.color = 'var(--warn)';
     }
   } catch {

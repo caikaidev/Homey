@@ -1,4 +1,4 @@
-import { createRemoteJWKSet, jwtVerify } from 'jose';
+import { createRemoteJWKSet, decodeJwt, jwtVerify } from 'jose';
 import type { MiddlewareHandler } from 'hono';
 import type { Actor, AppEnv, Env } from './env';
 import { apiError } from './errors';
@@ -15,7 +15,8 @@ const MAX_NAME_LENGTH = 20;
  */
 export const requireActor: MiddlewareHandler<AppEnv> = async (c, next) => {
   const actor = (await actorFromFamilyKey(c.req.raw, c.env)) ?? (await actorFromAccess(c.req.raw, c.env));
-  if (!actor) return apiError(c, 401, 'unauthorized', '需要家庭口令或 Cloudflare Access 登录');
+  // 未登录时 message 写明 Access 那一步卡在哪，首页直接显示，方便排查配置。
+  if (typeof actor === 'string') return apiError(c, 401, 'unauthorized', actor);
   c.set('actor', actor);
   await next();
 };
@@ -42,10 +43,13 @@ function recorderName(raw: string | null): string {
 
 const jwksCache = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
 
-async function actorFromAccess(req: Request, env: Env): Promise<Actor | null> {
-  const token = req.headers.get('Cf-Access-Jwt-Assertion') ?? accessCookie(req);
+/** 成功返回身份；失败返回原因（不含密钥，可以展示给用户）。 */
+async function actorFromAccess(req: Request, env: Env): Promise<Actor | string> {
   const team = env.ACCESS_TEAM_DOMAIN?.replace(/\/+$/, '');
-  if (!token || !team || !env.ACCESS_AUD) return null;
+  if (!team || !env.ACCESS_AUD) return '服务器没有配置 Cloudflare Access（团队域名或 AUD 为空）';
+  const header = req.headers.get('Cf-Access-Jwt-Assertion');
+  const token = header ?? accessCookie(req);
+  if (!token) return '请求里没有 Access 登录凭证（既没有 Cf-Access-Jwt-Assertion 头，也没有 CF_Authorization cookie）';
   let jwks = jwksCache.get(team);
   if (!jwks) {
     jwks = createRemoteJWKSet(new URL(`${team}/cdn-cgi/access/certs`));
@@ -54,11 +58,22 @@ async function actorFromAccess(req: Request, env: Env): Promise<Actor | null> {
   try {
     const { payload } = await jwtVerify(token, jwks, { issuer: team, audience: env.ACCESS_AUD });
     const email = typeof payload.email === 'string' ? payload.email : '';
-    if (!email) return null;
+    if (!email) return 'Access 凭证里没有邮箱（可能是服务令牌）';
     // 显示名映射（邮箱 → 爸爸/妈妈）在 P1 的 settings 里做，这里先用邮箱前缀。
     return { kind: 'web', email, name: email.split('@')[0]! };
+  } catch (err) {
+    const source = header ? '请求头' : 'cookie';
+    return `Access 凭证（来自${source}）校验失败：${err instanceof Error ? err.message : String(err)}；${describeToken(token)}；服务器期望 aud=${env.ACCESS_AUD}，iss=${team}`;
+  }
+}
+
+/** 不验签地读出凭证的 aud / iss，用来对照配置。 */
+function describeToken(token: string): string {
+  try {
+    const { aud, iss } = decodeJwt(token);
+    return `凭证 aud=${Array.isArray(aud) ? aud.join(',') : aud}，iss=${iss}`;
   } catch {
-    return null;
+    return '凭证不是有效的 JWT';
   }
 }
 
