@@ -6,6 +6,8 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.util.TypedValue
+import android.view.View
 import android.widget.RemoteViews
 import androidx.core.content.ContextCompat
 import ian.dev.zaizai.MainActivity
@@ -56,8 +58,13 @@ object BoardWidget {
         return views
     }
 
+    /** 待做：大字事项名。做完：大字换成蹦跳的小牛崽，右边的字放大一点。 */
     private fun badge(context: Context, views: RemoteViews, text: String, done: Boolean) {
         views.setTextViewText(R.id.widget_big, text)
+        views.setViewVisibility(R.id.widget_big, if (done) View.GONE else View.VISIBLE)
+        views.setViewVisibility(R.id.widget_calf, if (done) View.VISIBLE else View.GONE)
+        views.setContentDescription(R.id.widget_badge, text)
+        views.setTextViewTextSize(R.id.widget_sub, TypedValue.COMPLEX_UNIT_SP, if (done) 26f else 20f)
         views.setInt(R.id.widget_badge, "setBackgroundResource", if (done) R.drawable.widget_badge_done else R.drawable.widget_badge_pending)
         views.setTextColor(R.id.widget_big, ContextCompat.getColor(context, if (done) R.color.widget_done else R.color.widget_accent))
     }

@@ -41,7 +41,7 @@
         android:textColor="@color/widget_muted"
         android:textSize="18sp" />
 
-    <!-- 名称牌：待做是橙色底，做完是绿色底 -->
+    <!-- 名称牌：待做是橙色底，大字写事项名；做完是绿色底，换成蹦跳的小牛崽 -->
     <LinearLayout
         android:id="@+id/widget_badge"
         android:layout_width="match_parent"
@@ -55,6 +55,41 @@
         android:paddingTop="6dp"
         android:paddingEnd="16dp"
         android:paddingBottom="6dp">
+
+        <!-- 逐帧动画：小组件里只有 ViewFlipper 能自己动，桌面可见时才翻页，不耗电 -->
+        <ViewFlipper
+            android:id="@+id/widget_calf"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:autoStart="true"
+            android:flipInterval="350"
+            android:visibility="gone">
+
+            <ImageView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:importantForAccessibility="no"
+                android:src="@drawable/calf_0" />
+
+            <ImageView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:importantForAccessibility="no"
+                android:src="@drawable/calf_1" />
+
+            <ImageView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:importantForAccessibility="no"
+                android:src="@drawable/calf_2" />
+
+            <ImageView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:importantForAccessibility="no"
+                android:src="@drawable/calf_3" />
+        </ViewFlipper>
 
         <TextView
             android:id="@+id/widget_big"

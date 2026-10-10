@@ -1,6 +1,7 @@
 package ian.dev.zaizai.ui
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
@@ -37,6 +39,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -44,11 +47,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import ian.dev.zaizai.R
 import ian.dev.zaizai.data.BizDate
 import ian.dev.zaizai.data.Board
 import ian.dev.zaizai.data.BoardItem
@@ -207,17 +212,39 @@ private fun EmptyState(state: BoardState, onRefresh: () -> Unit) {
 @Composable
 private fun Summary(board: Board) {
     val pending = board.pendingCount
-    Text(
-        text = when {
-            board.today.isEmpty() -> "今天没有要做的事"
-            pending == 0 -> "今天的都做完了"
-            else -> "还剩 $pending 件"
-        },
-        fontSize = 40.sp,
-        lineHeight = 48.sp,
-        fontWeight = FontWeight.Bold,
-        color = if (pending > 0) ZaiZai.colors.pending else ZaiZai.colors.done,
-        modifier = Modifier.padding(vertical = 4.dp),
+    Column {
+        if (pending == 0) CalfDance(Modifier.fillMaxWidth().height(180.dp))
+        Text(
+            text = when {
+                board.today.isEmpty() -> "今天没有要做的事"
+                pending == 0 -> "今天的都做完了"
+                else -> "还剩 $pending 件"
+            },
+            fontSize = 40.sp,
+            lineHeight = 48.sp,
+            fontWeight = FontWeight.Bold,
+            color = if (pending > 0) ZaiZai.colors.pending else ZaiZai.colors.done,
+            modifier = Modifier.padding(vertical = 4.dp),
+        )
+    }
+}
+
+private val CALF_FRAMES = intArrayOf(R.drawable.calf_0, R.drawable.calf_1, R.drawable.calf_2, R.drawable.calf_3)
+
+/** 都做完了：小牛崽开心地蹦跳，和小组件用同一组帧。 */
+@Composable
+private fun CalfDance(modifier: Modifier = Modifier) {
+    var frame by remember { mutableIntStateOf(0) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(350)
+            frame = (frame + 1) % CALF_FRAMES.size
+        }
+    }
+    Image(
+        painter = painterResource(CALF_FRAMES[frame]),
+        contentDescription = "开心的小牛崽",
+        modifier = modifier,
     )
 }
 
