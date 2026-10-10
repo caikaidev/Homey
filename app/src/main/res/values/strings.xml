@@ -1,4 +1,4 @@
 <resources>
     <string name="app_name">崽崽小看板</string>
-    <string name="placeholder_building">正在搭建中，很快就能看到今天的事。</string>
+    <string name="widget_description">今天还剩几件、前 3 项和最后同步时间</string>
 </resources>

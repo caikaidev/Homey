@@ -2,4 +2,14 @@
 <resources>
 
     <style name="Theme.ZaiZai" parent="android:Theme.DeviceDefault.NoActionBar" />
+
+    <style name="WidgetItem">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">4dp</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:textColor">@color/widget_ink</item>
+        <item name="android:textSize">18sp</item>
+    </style>
 </resources>

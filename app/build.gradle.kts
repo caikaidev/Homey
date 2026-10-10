@@ -26,8 +26,8 @@ android {
     applicationId = "ian.dev.zaizai"
     minSdk = 24
     targetSdk = 36
-    versionCode = 1
-    versionName = "0.1"
+    versionCode = 2
+    versionName = "0.2"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
@@ -79,8 +79,16 @@ dependencies {
   implementation(libs.androidx.compose.ui.graphics)
   implementation(libs.androidx.compose.ui.tooling.preview)
   implementation(libs.androidx.core.ktx)
+  implementation(libs.androidx.compose.material.icons.core)
   implementation(libs.androidx.lifecycle.runtime.ktx)
+  implementation(libs.androidx.work.runtime.ktx)
+  implementation(libs.kotlinx.coroutines.android)
+  implementation(libs.okhttp)
   testImplementation(libs.junit)
+  testImplementation(libs.kotlinx.coroutines.test)
+  testImplementation(libs.mockwebserver)
+  // 单元测试跑在 JVM 上，android.jar 里的 org.json 只是桩，换成真实实现
+  testImplementation(libs.org.json)
   androidTestImplementation(platform(libs.androidx.compose.bom))
   androidTestImplementation(libs.androidx.junit)
   androidTestImplementation(libs.androidx.runner)
