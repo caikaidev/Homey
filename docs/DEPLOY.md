@@ -73,8 +73,11 @@ curl -i -H "Authorization: Bearer <FAMILY_KEY>" $URL/api/ping  # 200
 
 ## 6. 奶奶的 App（P3）
 
-1. **拿安装包**：GitHub → Actions → Android → 最新一次绿色的运行 → 页面底部 Artifacts 里下载 `zaizai-board-debug-apk`（zip，解压出 `.apk`）。
-   正式版本打 `v*` tag 后在 Releases 里下载。
+1. **拿安装包**：GitHub → Actions → Android → 最新一次绿色的运行 → 页面底部 Artifacts 里下载 `zaizai-board-apk`（zip，解压出 `.apk`，固定签名的正式包）。
+   正式版本打 `v*` tag（与 `versionName` 一致，如 `v0.2`）后在 Releases 里下载。
+   - 固定签名需要先在 GitHub → Settings → Secrets and variables → Actions 里配好 `RELEASE_KEYSTORE_BASE64`、`RELEASE_STORE_PASSWORD`、`RELEASE_KEY_ALIAS`、`RELEASE_KEY_PASSWORD`。
+     没配时只有 `zaizai-board-debug-apk`，每次构建的签名都不同，**不能覆盖安装**。
+   - 签名密钥文件（`.jks`）和密码要另外妥善保存，丢了就没法给已装的 App 升级，只能卸载重装。
 2. **安装**：把 `.apk` 发到奶奶手机（微信文件传输助手、数据线都行），点开安装；系统提示“未知来源”时按提示允许一次。
 3. **首次设置**（家长来填）：
    - 服务器地址：Worker 的地址，如 `zaizai-board.<子域>.workers.dev`（不用写 `https://` 和 `/api`）。

@@ -17,6 +17,13 @@ jobs:
     name: Unit tests & debug build
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      # 配了签名 Secrets 就用固定签名打包（debug 和 release 同一把钥匙，可以互相覆盖安装）；
+      # 没配（fork 的 PR 等）就退回系统默认的调试签名
+      HAS_KEYSTORE: ${{ secrets.RELEASE_KEYSTORE_BASE64 != '' }}
+      RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+      RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+      RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
 
@@ -26,11 +33,23 @@ jobs:
           distribution: temurin
           java-version: '25'
 
+      - name: Restore keystore
+        if: env.HAS_KEYSTORE == 'true'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          echo "RELEASE_STORE_FILE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+
       - name: Unit tests
         run: ./gradlew testDebugUnitTest --stacktrace
 
       - name: Build debug APK
         run: ./gradlew assembleDebug --stacktrace
+
+      - name: Build signed release APK
+        if: env.HAS_KEYSTORE == 'true'
+        run: ./gradlew assembleRelease --stacktrace
 
       - name: Upload test reports
         if: always()
@@ -46,3 +65,15 @@ jobs:
           name: zaizai-board-debug-apk
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: ignore
+
+      - name: Upload signed release APK
+        if: env.HAS_KEYSTORE == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: zaizai-board-apk
+          path: app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+
+      - name: Remove keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP/release.jks"
