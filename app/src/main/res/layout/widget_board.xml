@@ -17,21 +17,23 @@
         android:textColor="@color/widget_muted"
         android:textSize="16sp" />
 
-    <!-- 大字“名称牌”：待做是橙色底，做完是绿色底 -->
+    <!-- 大字“名称牌”：待做是橙色底，做完是绿色底。字号随小组件拉伸的大小自动放大（Android 8+）。 -->
     <TextView
         android:id="@+id/widget_big"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_marginTop="8dp"
         android:layout_weight="1"
-        android:autoSizeMaxTextSize="64sp"
-        android:autoSizeMinTextSize="24sp"
+        android:autoSizeMaxTextSize="240sp"
+        android:autoSizeMinTextSize="20sp"
         android:autoSizeTextType="uniform"
         android:background="@drawable/widget_badge_pending"
         android:gravity="center"
         android:maxLines="1"
         android:paddingStart="12dp"
+        android:paddingTop="8dp"
         android:paddingEnd="12dp"
+        android:paddingBottom="8dp"
         android:textColor="@color/widget_accent"
         android:textSize="48sp"
         android:textStyle="bold" />
