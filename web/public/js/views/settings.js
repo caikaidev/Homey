@@ -15,6 +15,7 @@ export async function settings(el) {
   const caregivers = [...s.members.caregivers];
 
   function draw() {
+    el.classList.add('form-narrow');
     el.innerHTML = `
       <header class="head"><h1>设置</h1><div class="small muted">当前登录：${esc(me.actor.name)}</div></header>
 
