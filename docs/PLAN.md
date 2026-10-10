@@ -131,7 +131,7 @@ Homey/
 - 设置：服务器地址、FAMILY_KEY、我是谁、播报开关。
 
 ### P4 — 家庭试用
-- 7 天真实使用；Worker 记录登记时间 vs 计划时间、来源（web/app/widget），便于复盘。
+- 7 天真实使用；Worker 记录登记时间 vs 计划时间、来源（web/app/widget），网页"记录"顶上有试用复盘（`GET /api/review`），做法见 `TRIAL.md`。
 
 ---
 

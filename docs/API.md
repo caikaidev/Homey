@@ -126,6 +126,23 @@ App 对事项和设置只读；只有家长能调用标注 **家长** 的接口�
 
 `status`：`done` | `skipped` | `missed`（以前的日子没登记）| `pending`（今天还没登记）。未登记的实例按当前排期推算，只针对进行中的事项、且不早于事项创建那天。
 
+### `GET /api/review?days=7`
+家庭试用复盘（P4），`days` 1–60，统计口径同 `/api/history`；今天还没登记的不算到期。
+
+```json
+{ "from": "2026-10-04", "to": "2026-10-10",
+  "due": 14, "done": 12, "skipped": 1, "missed": 1,
+  "on_time": 11, "on_time_rate": 0.79, "median_delay_min": 12,
+  "late_day": 0, "by_source": { "app": 10, "web": 3 }, "by_recorder": { "奶奶": 10, "妈妈": 3 },
+  "undone": 1,
+  "days": [ { "date": "2026-10-10", "weekday": "周六", "due": 2, "on_time": 2, "missed": 0 } ] }
+```
+
+- `on_time`：计划时间后 60 分钟内登记（提前也算）；`on_time_rate = on_time / due`。
+- `median_delay_min`：已喂的登记时间减计划时间的中位数（分钟，提前为负）。
+- `late_day`：登记日期和那件事的日期不是同一天（隔天补登），日期错位要看它。
+- `undone`：撤销后没有再登记的次数，误触的参考。
+
 ### `GET /api/settings`
 `{ child_nickname, members: { parents: [{ email, name }], caregivers: [name] } }`
 
