@@ -1,6 +1,7 @@
 import { createRemoteJWKSet, decodeJwt, jwtVerify } from 'jose';
 import type { MiddlewareHandler } from 'hono';
 import type { Actor, AppEnv, Env } from './env';
+import { getSettings } from './db';
 import { apiError } from './errors';
 
 const DEFAULT_APP_RECORDER = '照护人';
@@ -17,6 +18,12 @@ export const requireActor: MiddlewareHandler<AppEnv> = async (c, next) => {
   const actor = (await actorFromFamilyKey(c.req.raw, c.env)) ?? (await actorFromAccess(c.req.raw, c.env));
   // 未登录时 message 写明 Access 那一步卡在哪，首页直接显示，方便排查配置。
   if (typeof actor === 'string') return apiError(c, 401, 'unauthorized', actor);
+  if (actor.kind === 'web') {
+    // 设置页里配了“邮箱 → 显示名”（如爸爸/妈妈）就用它，否则用邮箱前缀。
+    const { members } = await getSettings(c.env.DB);
+    const parent = members.parents.find((p) => p.email.toLowerCase() === actor.email.toLowerCase());
+    if (parent?.name) actor.name = parent.name;
+  }
   c.set('actor', actor);
   await next();
 };
@@ -59,7 +66,6 @@ async function actorFromAccess(req: Request, env: Env): Promise<Actor | string> 
     const { payload } = await jwtVerify(token, jwks, { issuer: team, audience: env.ACCESS_AUD });
     const email = typeof payload.email === 'string' ? payload.email : '';
     if (!email) return 'Access 凭证里没有邮箱（可能是服务令牌）';
-    // 显示名映射（邮箱 → 爸爸/妈妈）在 P1 的 settings 里做，这里先用邮箱前缀。
     return { kind: 'web', email, name: email.split('@')[0]! };
   } catch (err) {
     const source = header ? '请求头' : 'cookie';
