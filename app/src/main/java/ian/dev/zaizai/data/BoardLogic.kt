@@ -86,16 +86,16 @@ object BoardLogic {
     }
 
     /**
-     * 小组件内容：只放一件最该做的事，大字显示名称（如“AD”），下面一行时间和剩几件。
+     * 小组件名称牌：只放一件最该做的事，大字显示名称（如“AD”），右边两行写时间和剩几件。
      * 都做完了就大字“都喂好了”。
      */
     fun widgetContent(board: Board): WidgetContent {
         val pending = board.today.filter { it.status == ItemStatus.PENDING }
         val next = pending.minByOrNull { it.slot }
-            ?: return if (board.today.isEmpty()) WidgetContent("今天没事", "好好休息", done = true)
-            else WidgetContent("都喂好了", "今天 ${board.today.size} 件都登记了", done = true)
-        val rest = if (pending.size > 1) " · 还剩 ${pending.size} 件" else ""
-        return WidgetContent(next.title, "${next.slot} 该喂了$rest", done = false)
+            ?: return if (board.today.isEmpty()) WidgetContent("今天没事", "好好\n休息", done = true)
+            else WidgetContent("都喂好了", "今天\n${board.today.size} 件", done = true)
+        val rest = if (pending.size > 1) "\n还剩 ${pending.size} 件" else "\n该喂了"
+        return WidgetContent(next.title, "${next.slot}$rest", done = false)
     }
 }
 

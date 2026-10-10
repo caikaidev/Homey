@@ -124,9 +124,9 @@ class BoardLogicTest {
     @Test
     fun `小组件只放最早一件没做的，大字名称`() {
         val b = board(item("钙", "19:00"), item("AD", "08:00"), item("早", "07:00", ItemStatus.DONE))
-        assertEquals(WidgetContent("AD", "08:00 该喂了 · 还剩 2 件", done = false), BoardLogic.widgetContent(b))
-        assertEquals(WidgetContent("钙", "19:00 该喂了", done = false), BoardLogic.widgetContent(board(item("钙", "19:00"))))
-        assertEquals(WidgetContent("都喂好了", "今天 1 件都登记了", done = true), BoardLogic.widgetContent(board(item("早", "07:00", ItemStatus.DONE))))
+        assertEquals(WidgetContent("AD", "08:00\n还剩 2 件", done = false), BoardLogic.widgetContent(b))
+        assertEquals(WidgetContent("钙", "19:00\n该喂了", done = false), BoardLogic.widgetContent(board(item("钙", "19:00"))))
+        assertEquals(WidgetContent("都喂好了", "今天\n1 件", done = true), BoardLogic.widgetContent(board(item("早", "07:00", ItemStatus.DONE))))
         assertTrue(BoardLogic.widgetContent(board()).done)
     }
 }

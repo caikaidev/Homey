@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 桌面小组件：给长辈看，只放一件最该做的事，大字名称；点任意处打开 App。 -->
+<!--
+  桌面小组件（可以代替系统时钟）：上面大时钟和日期，下面一条“名称牌”显示下一件该做的事。
+  时钟由系统 TextClock 自己走，不靠 App 刷新；字号随小组件拉伸自动放大（Android 8+）。
+  点任意处打开 App。
+-->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_root"
     android:layout_width="match_parent"
@@ -8,56 +12,86 @@
     android:orientation="vertical"
     android:padding="14dp">
 
-    <TextView
-        android:id="@+id/widget_title"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:maxLines="1"
-        android:ellipsize="end"
-        android:textColor="@color/widget_muted"
-        android:textSize="16sp" />
-
-    <!-- 大字“名称牌”：待做是橙色底，做完是绿色底。字号随小组件拉伸的大小自动放大（Android 8+）。 -->
-    <TextView
-        android:id="@+id/widget_big"
+    <TextClock
+        android:id="@+id/widget_clock"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_marginTop="8dp"
-        android:layout_weight="1"
-        android:autoSizeMaxTextSize="240sp"
-        android:autoSizeMinTextSize="20sp"
+        android:layout_weight="5"
+        android:autoSizeMaxTextSize="160sp"
+        android:autoSizeMinTextSize="28sp"
         android:autoSizeTextType="uniform"
-        android:background="@drawable/widget_badge_pending"
+        android:format12Hour="HH:mm"
+        android:format24Hour="HH:mm"
         android:gravity="center"
+        android:includeFontPadding="false"
         android:maxLines="1"
-        android:paddingStart="12dp"
-        android:paddingTop="8dp"
-        android:paddingEnd="12dp"
-        android:paddingBottom="8dp"
-        android:textColor="@color/widget_accent"
-        android:textSize="48sp"
+        android:textColor="@color/widget_ink"
+        android:textSize="56sp"
         android:textStyle="bold" />
 
-    <TextView
-        android:id="@+id/widget_sub"
+    <TextClock
+        android:id="@+id/widget_date"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:ellipsize="end"
+        android:format12Hour="M月d日 EEEE"
+        android:format24Hour="M月d日 EEEE"
         android:gravity="center"
         android:maxLines="1"
-        android:ellipsize="end"
-        android:textColor="@color/widget_ink"
-        android:textSize="22sp"
-        android:textStyle="bold" />
+        android:textColor="@color/widget_muted"
+        android:textSize="18sp" />
+
+    <!-- 名称牌：待做是橙色底，做完是绿色底 -->
+    <LinearLayout
+        android:id="@+id/widget_badge"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="10dp"
+        android:layout_weight="4"
+        android:background="@drawable/widget_badge_pending"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="16dp"
+        android:paddingTop="6dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="6dp">
+
+        <TextView
+            android:id="@+id/widget_big"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:autoSizeMaxTextSize="120sp"
+            android:autoSizeMinTextSize="22sp"
+            android:autoSizeTextType="uniform"
+            android:gravity="center_vertical|start"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:textColor="@color/widget_accent"
+            android:textSize="40sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/widget_sub"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:gravity="end|center_vertical"
+            android:lineSpacingExtra="2dp"
+            android:maxLines="2"
+            android:textColor="@color/widget_ink"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+    </LinearLayout>
 
     <TextView
         android:id="@+id/widget_footer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
+        android:layout_marginTop="6dp"
+        android:ellipsize="end"
         android:gravity="center"
         android:maxLines="1"
-        android:ellipsize="end"
         android:textColor="@color/widget_muted"
         android:textSize="13sp" />
 </LinearLayout>

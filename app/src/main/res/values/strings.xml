@@ -1,4 +1,4 @@
 <resources>
     <string name="app_name">崽崽小看板</string>
-    <string name="widget_description">大字显示下一件该做的事和还剩几件</string>
+    <string name="widget_description">大时钟 + 大字显示下一件该做的事，可以代替系统时钟</string>
 </resources>
