@@ -23,6 +23,6 @@ migrations_dir = "migrations"
 [vars]
 # Cloudflare Access：团队域名（如 https://<team>.cloudflareaccess.com）与应用 AUD。
 # 留空则不接受 Access 登录，只能用 FAMILY_KEY。
-ACCESS_TEAM_DOMAIN = ""
-ACCESS_AUD = ""
+ACCESS_TEAM_DOMAIN = "https://caikai.cloudflareaccess.com"
+ACCESS_AUD = "0ef6bb4d789952a201aeb4f79d852f38cb5f5accda7648b8ff4a758adb553214"
 GEMINI_MODEL = "gemini-3.8-flash"
