@@ -13,6 +13,8 @@ const accessEnv = { ...env, ACCESS_TEAM_DOMAIN: TEAM, ACCESS_AUD: AUD };
 let privateKey: CryptoKey;
 let jwks: { keys: unknown[] };
 const realFetch = globalThis.fetch;
+let gemini: (url: string, init?: RequestInit) => Promise<Response> | Response = () => new Response('unexpected', { status: 500 });
+const geminiText = (obj: unknown) => Response.json({ candidates: [{ content: { parts: [{ text: JSON.stringify(obj) }] } }] });
 
 beforeAll(async () => {
   const pair = await generateKeyPair('RS256');
@@ -22,6 +24,7 @@ beforeAll(async () => {
   vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
     const url = input instanceof Request ? input.url : String(input);
     if (url === `${TEAM}/cdn-cgi/access/certs`) return Response.json(jwks);
+    if (url.startsWith('https://generativelanguage.googleapis.com/')) return gemini(url, init);
     return realFetch(input, init);
   });
 });
@@ -221,3 +224,70 @@ describe('CSRF', () => {
     expect(res.status).toBe(401);
   });
 });
+
+describe('Gemini 解析', () => {
+  const withKey = { ...accessEnv, GEMINI_API_KEY: 'test-gemini-key' };
+  async function parseWith(text: string) {
+    const res = await app.fetch(
+      new Request(`${ORIGIN}/api/parse`, {
+        method: 'POST',
+        headers: { 'Cf-Access-Jwt-Assertion': await parentToken('dad@example.com'), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      }),
+      withKey,
+    );
+    return { status: res.status, body: (await res.json()) as any };
+  }
+
+  it('B4 用 Gemini 解析，Key 只在服务端请求头里，用药加医嘱提醒', async () => {
+    let seen: { url: string; key: string | null } | null = null;
+    gemini = (url, init) => {
+      seen = { url, key: new Headers(init?.headers).get('x-goog-api-key') };
+      return geminiText({
+        title: '感冒药', kind: 'medicine', type: 'daily', times: ['08:00', '13:00', '19:00'],
+        start: today(), end: addDays(today(), 2), warnings: ['没说具体时间，按常见时间填写'],
+      });
+    };
+    const { status, body } = await parseWith('感冒药一天三次，吃3天');
+    expect(status).toBe(200);
+    expect(seen!.url).toContain('/models/gemini-3.8-flash:generateContent');
+    expect(seen!.key).toBe('test-gemini-key');
+    expect(body).toMatchObject({
+      source: 'gemini', title: '感冒药', kind: 'medicine',
+      schedule: { type: 'daily', times: ['08:00', '13:00', '19:00'], end: addDays(today(), 2) },
+    });
+    expect(body.warnings).toEqual(['没说具体时间，按常见时间填写', expect.stringContaining('医嘱')]);
+    expect(JSON.stringify(body)).not.toContain('test-gemini-key');
+  });
+
+  it('地区不支持时降级到规则解析，并说明原因', async () => {
+    gemini = () => Response.json({ error: { message: 'User location is not supported for the API use.' } }, { status: 400 });
+    const { body } = await parseWith('AD隔天吃早上8点');
+    expect(body).toMatchObject({ source: 'rules', title: 'AD', schedule: { type: 'interval_days', every: 2 } });
+    expect(body.warnings[0]).toContain('地区不可用');
+  });
+
+  it('Gemini 给出不合法的排期时降级到规则解析', async () => {
+    gemini = () => geminiText({ title: 'AD', kind: 'supplement', type: 'daily', times: ['8点'], start: today(), end: '', warnings: [] });
+    const { body } = await parseWith('AD每天早上8点');
+    expect(body.source).toBe('rules');
+    expect(body.schedule.times).toEqual(['08:00']);
+  });
+
+  it('Gemini 返回 500 时降级', async () => {
+    gemini = () => new Response('boom', { status: 500 });
+    expect((await parseWith('钙每天晚上7点')).body).toMatchObject({ source: 'rules', title: '钙' });
+  });
+
+  it('weekdays + end 的事项能建、看板按星期出现', async () => {
+    const start = today();
+    const res = await call(dad, 'POST', '/api/tasks', {
+      title: '每周', schedule: { type: 'weekdays', weekdays: [0, 1, 2, 3, 4, 5, 6], start, end: start, times: ['10:00'] },
+    });
+    expect(res.status).toBe(201);
+    const b = (await call(grandma, 'GET', '/api/board')).body;
+    expect(b.today.some((i: { task_id: string }) => i.task_id === res.body.task.id)).toBe(true);
+    expect(b.tomorrow.items.some((i: { task_id: string }) => i.task_id === res.body.task.id)).toBe(false);
+  });
+});
+

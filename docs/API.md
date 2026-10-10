@@ -33,11 +33,13 @@ App 对事项和设置只读；只有家长能调用标注 **家长** 的接口�
 ```json
 { "type": "daily", "start": "2026-10-10", "times": ["19:00"] }
 { "type": "interval_days", "every": 2, "start": "2026-10-10", "times": ["08:00"] }
+{ "type": "weekdays", "weekdays": [1, 3, 5], "start": "2026-10-10", "times": ["08:00"], "end": "2026-12-31" }
 ```
 
 - `start` 起生效，`interval_days` 以 `start` 为锚点：`(date - start) % every == 0`。暂停再恢复不改锚点。
 - `every` 2–30；`times` 1–6 个，服务端去重并排序。
-- P2 将增加可选字段 `weekdays`、`end`，旧数据不受影响。
+- `weekdays`（P2）：0 = 周日 … 6 = 周六，去重排序。
+- `end`（P2，可选，所有类型）：最后一天（含当天），不早于 `start`。没有就是长期。
 
 ### Task
 
@@ -134,8 +136,10 @@ App 对事项和设置只读；只有家长能调用标注 **家长** 的接口�
 请求 `{ text }` → 排期草稿，**不保存**：
 
 ```json
-{ "source": "rules", "title": "AD", "schedule": { … }, "describe": "隔天 08:00（10月10日起）",
+{ "source": "gemini", "title": "AD", "kind": "supplement", "schedule": { … }, "describe": "隔天 08:00（10月10日起）",
   "preview": [ { "date": "2026-10-10", "times": ["08:00"] }, … ], "warnings": [] }
 ```
 
-P1 用规则解析（`source: "rules"`）；P2 接 Gemini 后 `source` 为 `gemini`，失败时降级规则解析。
+- 配了 `GEMINI_API_KEY` 时先用 Gemini（`source: "gemini"`）。没配 Key、超时（8 秒）、出错或返回的排期不合法时，降级为规则解析（`source: "rules"`），并在 `warnings` 第一条说明原因。
+- `kind`：`supplement` | `medicine`；用药时 `warnings` 一定含“请按医嘱核对剂量与疗程”。
+- `preview` 从今天和 `start` 中较晚的一天起算。
