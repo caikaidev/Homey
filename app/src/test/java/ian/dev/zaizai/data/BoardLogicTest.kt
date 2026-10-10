@@ -103,6 +103,8 @@ class BoardLogicTest {
         assertEquals("崽崽今天还有4件事：早上8点，AD 一粒；中午12点，益生菌；晚上7点半，钙；还有1件", BoardLogic.speech(b))
         assertEquals("崽崽今天的事都做完了", BoardLogic.speech(board(item("AD", "08:00", ItemStatus.DONE))))
         assertEquals("崽崽今天没有要做的事", BoardLogic.speech(board()))
+        // 2026-10-10 21:31 北京时间
+        assertEquals("现在是10月10日星期六，晚上9点31分。崽崽今天没有要做的事", BoardLogic.announce(board(), 1_791_639_060_000L))
     }
 
     @Test

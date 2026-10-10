@@ -28,4 +28,12 @@ class BizDateTest {
         assertEquals("1月2日", BizDate.monthDay("2027-01-02"))
         assertEquals("bad", BizDate.monthDay("bad"))
     }
+
+    @Test
+    fun weekday() {
+        assertEquals("星期四", BizDate.weekday(0))
+        // 2026-10-10 是星期六；北京时间 00:30 时 UTC 还是前一天
+        assertEquals("星期六", BizDate.weekday(1_791_639_060_000L))
+        assertEquals("星期六", BizDate.weekday(1_791_563_400_000L))
+    }
 }

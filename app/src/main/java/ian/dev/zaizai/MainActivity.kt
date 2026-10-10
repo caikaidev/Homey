@@ -100,7 +100,7 @@ class MainActivity : ComponentActivity() {
         if (now - lastSpokenAt < SPEAK_INTERVAL_MS) return
         lastSpokenAt = now
         val s = speaker ?: Speaker(this).also { speaker = it }
-        s.speak(BoardLogic.speech(board))
+        s.speak(BoardLogic.announce(board, repository.serverNow()))
     }
 
     private fun sayCheckin(item: BoardItem) {

@@ -46,6 +46,13 @@ object BoardLogic {
         return (c.recordedAt + UNDO_WINDOW_MS - serverNow).coerceIn(0, UNDO_WINDOW_MS)
     }
 
+    /** 打开 App 或点小组件喇叭时念的整段：先报日期时间，再念今天的事。 */
+    fun announce(board: Board, nowMs: Long): String = "${spokenNow(nowMs)}。${speech(board)}"
+
+    /** `现在是10月10日星期六，晚上9点31分`。 */
+    fun spokenNow(nowMs: Long): String =
+        "现在是${BizDate.monthDay(BizDate.date(nowMs))}${BizDate.weekday(nowMs)}，${spokenTime(BizDate.hhmm(nowMs))}"
+
     /** 打开 App 时的语音播报，最多念 3 项。 */
     fun speech(board: Board, max: Int = 3): String {
         val pending = board.today.filter { it.status == ItemStatus.PENDING }

@@ -26,10 +26,11 @@ class BoardWidgetProvider : AppWidgetProvider() {
         if (intent.action != BoardWidget.ACTION_SPEAK) return super.onReceive(context, intent)
         val app = context.applicationContext as ZaizaiApp
         val board = app.repository.state.value.board
+        val now = app.repository.serverNow()
         val text = when {
-            board == null -> "还没同步，请打开 App 看看"
-            board.date != BizDate.date(app.repository.serverNow()) -> "看板还没换到今天，请打开 App 看看"
-            else -> BoardLogic.speech(board)
+            board == null -> "${BoardLogic.spokenNow(now)}。还没同步，请打开 App 看看"
+            board.date != BizDate.date(now) -> "${BoardLogic.spokenNow(now)}。看板还没换到今天，请打开 App 看看"
+            else -> BoardLogic.announce(board, now)
         }
         // 等念完再结束广播，免得进程半路被回收；最多等 30 秒
         val result = goAsync()

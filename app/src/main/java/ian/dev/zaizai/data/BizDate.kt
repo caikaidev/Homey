@@ -31,6 +31,12 @@ object BizDate {
         return String.format(Locale.ROOT, "%02d:%02d", minutes / 60, minutes % 60)
     }
 
+    /** 时间戳 → `星期六`（北京时间）。1970-01-01 是星期四。 */
+    fun weekday(ms: Long): String {
+        val days = Math.floorDiv(ms + OFFSET_MS, DAY_MS)
+        return "星期" + "日一二三四五六"[Math.floorMod(days + 4, 7L).toInt()]
+    }
+
     /** `2026-10-10` → `10月10日`。 */
     fun monthDay(date: String): String {
         val parts = date.split('-')
