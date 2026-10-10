@@ -1,4 +1,4 @@
 <resources>
     <string name="app_name">崽崽小看板</string>
-    <string name="widget_description">今天还剩几件、前 3 项和最后同步时间</string>
+    <string name="widget_description">大字显示下一件该做的事和还剩几件</string>
 </resources>

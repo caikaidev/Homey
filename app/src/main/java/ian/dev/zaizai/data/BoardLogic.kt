@@ -85,13 +85,18 @@ object BoardLogic {
         }
     }
 
-    /** 小组件上的前几项：`08:00  AD 一粒`，已登记的带 ✓，跳过的带 –。 */
-    fun summaryLines(board: Board, max: Int = 3): List<String> = board.today.take(max).map {
-        val mark = when (it.status) {
-            ItemStatus.PENDING -> ""
-            ItemStatus.DONE -> "✓ "
-            ItemStatus.SKIPPED -> "– "
-        }
-        "$mark${it.slot}  ${it.title}"
+    /**
+     * 小组件内容：只放一件最该做的事，大字显示名称（如“AD”），下面一行时间和剩几件。
+     * 都做完了就大字“都喂好了”。
+     */
+    fun widgetContent(board: Board): WidgetContent {
+        val pending = board.today.filter { it.status == ItemStatus.PENDING }
+        val next = pending.minByOrNull { it.slot }
+            ?: return if (board.today.isEmpty()) WidgetContent("今天没事", "好好休息", done = true)
+            else WidgetContent("都喂好了", "今天 ${board.today.size} 件都登记了", done = true)
+        val rest = if (pending.size > 1) " · 还剩 ${pending.size} 件" else ""
+        return WidgetContent(next.title, "${next.slot} 该喂了$rest", done = false)
     }
 }
+
+data class WidgetContent(val big: String, val sub: String, val done: Boolean)

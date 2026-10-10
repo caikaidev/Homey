@@ -6,8 +6,8 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.view.View
 import android.widget.RemoteViews
+import androidx.core.content.ContextCompat
 import ian.dev.zaizai.MainActivity
 import ian.dev.zaizai.R
 import ian.dev.zaizai.ZaizaiApp
@@ -15,7 +15,7 @@ import ian.dev.zaizai.data.BizDate
 import ian.dev.zaizai.data.BoardLogic
 import ian.dev.zaizai.data.BoardState
 
-/** 桌面小组件。内容来自本机缓存，每次看板状态变化时刷新；点击进入 App（会顺便同步）。 */
+/** 桌面小组件：大字显示下一件该做的事。内容来自本机缓存，每次看板状态变化时刷新；点击进入 App（会顺便同步）。 */
 class BoardWidgetProvider : AppWidgetProvider() {
     override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) {
         val state = (context.applicationContext as ZaizaiApp).repository.state.value
@@ -24,8 +24,6 @@ class BoardWidgetProvider : AppWidgetProvider() {
 }
 
 object BoardWidget {
-    private val ITEM_IDS = intArrayOf(R.id.widget_item1, R.id.widget_item2, R.id.widget_item3)
-
     fun render(context: Context, state: BoardState) {
         val manager = AppWidgetManager.getInstance(context) ?: return
         val ids = manager.getAppWidgetIds(ComponentName(context, BoardWidgetProvider::class.java))
@@ -45,29 +43,24 @@ object BoardWidget {
         val board = state.board
         if (board == null) {
             views.setTextViewText(R.id.widget_title, context.getString(R.string.app_name))
-            views.setTextViewText(R.id.widget_count, "还没同步")
-            ITEM_IDS.forEach { views.setViewVisibility(it, View.GONE) }
-            views.setTextViewText(R.id.widget_footer, if (state.config.isComplete) "点这里打开 App 同步" else "点这里打开 App 完成设置")
+            badge(context, views, "还没同步", done = false)
+            views.setTextViewText(R.id.widget_sub, if (state.config.isComplete) "点这里打开" else "点这里设置")
+            views.setTextViewText(R.id.widget_footer, "")
             return views
         }
 
-        views.setTextViewText(R.id.widget_title, "${board.nickname}今天的事 · ${BizDate.monthDay(board.date)} ${board.weekday}")
-        views.setTextViewText(
-            R.id.widget_count,
-            when {
-                board.today.isEmpty() -> "今天没有要做的事"
-                board.pendingCount == 0 -> "都做完了"
-                else -> "还剩 ${board.pendingCount} 件"
-            },
-        )
-        val lines = BoardLogic.summaryLines(board)
-        ITEM_IDS.forEachIndexed { i, id ->
-            val line = lines.getOrNull(i)
-            views.setViewVisibility(id, if (line == null) View.GONE else View.VISIBLE)
-            views.setTextViewText(id, line.orEmpty())
-        }
+        views.setTextViewText(R.id.widget_title, "${board.nickname} · ${BizDate.monthDay(board.date)} ${board.weekday}")
+        val content = BoardLogic.widgetContent(board)
+        badge(context, views, content.big, content.done)
+        views.setTextViewText(R.id.widget_sub, content.sub)
         val synced = state.syncedAt?.let { BizDate.hhmm(it + state.clockOffset) } ?: "--:--"
         views.setTextViewText(R.id.widget_footer, if (state.offline) "离线 · 最后同步 $synced" else "最后同步 $synced")
         return views
+    }
+
+    private fun badge(context: Context, views: RemoteViews, text: String, done: Boolean) {
+        views.setTextViewText(R.id.widget_big, text)
+        views.setInt(R.id.widget_big, "setBackgroundResource", if (done) R.drawable.widget_badge_done else R.drawable.widget_badge_pending)
+        views.setTextColor(R.id.widget_big, ContextCompat.getColor(context, if (done) R.color.widget_done else R.color.widget_accent))
     }
 }

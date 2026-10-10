@@ -5,4 +5,7 @@
     <color name="widget_ink">#FF1C2420</color>
     <color name="widget_muted">#FF55605A</color>
     <color name="widget_accent">#FF9A3412</color>
+    <color name="widget_pending_soft">#FFFDEBDC</color>
+    <color name="widget_done_soft">#FFDCEFE9</color>
+    <color name="widget_done">#FF134A40</color>
 </resources>

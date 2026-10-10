@@ -213,8 +213,8 @@ private fun Summary(board: Board) {
             pending == 0 -> "今天的都做完了"
             else -> "还剩 $pending 件"
         },
-        fontSize = 34.sp,
-        lineHeight = 42.sp,
+        fontSize = 40.sp,
+        lineHeight = 48.sp,
         fontWeight = FontWeight.Bold,
         color = if (pending > 0) ZaiZai.colors.pending else ZaiZai.colors.done,
         modifier = Modifier.padding(vertical = 4.dp),
@@ -247,7 +247,7 @@ private fun ItemCard(
                 Spacer(Modifier.weight(1f))
                 StatusTag(item.status)
             }
-            Text(text = item.title, fontSize = 28.sp, lineHeight = 36.sp, fontWeight = FontWeight.Bold, color = colors.ink)
+            Text(text = item.title, fontSize = 36.sp, lineHeight = 44.sp, fontWeight = FontWeight.Bold, color = colors.ink)
             if (item.note.isNotBlank()) {
                 Text(text = item.note, style = MaterialTheme.typography.bodyLarge, color = colors.muted)
             }
@@ -256,9 +256,9 @@ private fun ItemCard(
                     onClick = onCheckin,
                     colors = ButtonDefaults.buttonColors(containerColor = colors.action, contentColor = colors.onAction),
                     shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 68.dp),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 80.dp),
                 ) {
-                    Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(28.dp))
+                    Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(32.dp))
                     Spacer(Modifier.width(8.dp))
                     Text("确认已喂", style = MaterialTheme.typography.labelLarge)
                 }
@@ -277,7 +277,7 @@ private fun ItemCard(
                     OutlinedButton(
                         onClick = onUndo,
                         shape = RoundedCornerShape(16.dp),
-                        modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp),
                     ) {
                         Text("点错了，撤销（${(undoMs + 999) / 1000} 秒）", style = MaterialTheme.typography.titleMedium)
                     }
@@ -304,7 +304,7 @@ private fun StatusTag(status: ItemStatus) {
             .semantics { contentDescription = label },
     ) {
         when (status) {
-            ItemStatus.PENDING -> Box(Modifier.size(18.dp).border(2.5.dp, fg, CircleShape))
+            ItemStatus.PENDING -> Box(Modifier.size(22.dp).border(3.dp, fg, CircleShape))
             ItemStatus.DONE -> TagIcon(Icons.Filled.CheckCircle, fg)
             ItemStatus.SKIPPED -> TagIcon(Icons.Filled.Close, fg)
         }
@@ -315,7 +315,7 @@ private fun StatusTag(status: ItemStatus) {
 
 @Composable
 private fun TagIcon(icon: ImageVector, tint: Color) {
-    Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
+    Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(24.dp))
 }
 
 @Composable
@@ -324,7 +324,7 @@ private fun TomorrowRow(item: TomorrowItem) {
         modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(item.slot, style = MaterialTheme.typography.bodyLarge, color = ZaiZai.colors.muted, modifier = Modifier.width(76.dp))
+        Text(item.slot, style = MaterialTheme.typography.bodyLarge, color = ZaiZai.colors.muted, modifier = Modifier.width(88.dp))
         Text(item.title, style = MaterialTheme.typography.bodyLarge, color = ZaiZai.colors.ink)
     }
 }

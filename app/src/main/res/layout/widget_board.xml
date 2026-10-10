@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 桌面小组件：日期、未登记数、前 3 项、最后同步时间；点任意处打开 App。 -->
+<!-- 桌面小组件：给长辈看，只放一件最该做的事，大字名称；点任意处打开 App。 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/widget_background"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:padding="14dp">
 
     <TextView
         android:id="@+id/widget_title"
@@ -15,35 +15,45 @@
         android:maxLines="1"
         android:ellipsize="end"
         android:textColor="@color/widget_muted"
-        android:textSize="15sp" />
+        android:textSize="16sp" />
 
+    <!-- 大字“名称牌”：待做是橙色底，做完是绿色底 -->
     <TextView
-        android:id="@+id/widget_count"
+        android:id="@+id/widget_big"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="2dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="8dp"
+        android:layout_weight="1"
+        android:autoSizeMaxTextSize="64sp"
+        android:autoSizeMinTextSize="24sp"
+        android:autoSizeTextType="uniform"
+        android:background="@drawable/widget_badge_pending"
+        android:gravity="center"
         android:maxLines="1"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
         android:textColor="@color/widget_accent"
-        android:textSize="26sp"
+        android:textSize="48sp"
         android:textStyle="bold" />
 
     <TextView
-        android:id="@+id/widget_item1"
-        style="@style/WidgetItem" />
-
-    <TextView
-        android:id="@+id/widget_item2"
-        style="@style/WidgetItem" />
-
-    <TextView
-        android:id="@+id/widget_item3"
-        style="@style/WidgetItem" />
+        android:id="@+id/widget_sub"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:gravity="center"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:textColor="@color/widget_ink"
+        android:textSize="22sp"
+        android:textStyle="bold" />
 
     <TextView
         android:id="@+id/widget_footer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
+        android:layout_marginTop="4dp"
+        android:gravity="center"
         android:maxLines="1"
         android:ellipsize="end"
         android:textColor="@color/widget_muted"
