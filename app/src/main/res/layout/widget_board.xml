@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  桌面小组件（可以代替系统时钟）：上面大时钟和日期，下面一条“名称牌”显示下一件该做的事。
+  时钟由系统 TextClock 自己走，不靠 App 刷新；字号随小组件拉伸自动放大（Android 8+）。
+  点任意处打开 App。
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_background"
+    android:orientation="vertical"
+    android:padding="14dp">
+
+    <TextClock
+        android:id="@+id/widget_clock"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="5"
+        android:autoSizeMaxTextSize="160sp"
+        android:autoSizeMinTextSize="28sp"
+        android:autoSizeTextType="uniform"
+        android:format12Hour="HH:mm"
+        android:format24Hour="HH:mm"
+        android:gravity="center"
+        android:includeFontPadding="false"
+        android:maxLines="1"
+        android:textColor="@color/widget_ink"
+        android:textSize="56sp"
+        android:textStyle="bold" />
+
+    <!-- 日期 + 喇叭：点喇叭念出今天还剩的事，不用打开 App -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <!-- 左边留出和喇叭一样宽的空，日期才居中（小组件里不能用 View，用 FrameLayout 占位） -->
+        <FrameLayout
+            android:layout_width="48dp"
+            android:layout_height="1dp" />
+
+        <TextClock
+            android:id="@+id/widget_date"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:format12Hour="M月d日 EEEE"
+            android:format24Hour="M月d日 EEEE"
+            android:gravity="center"
+            android:maxLines="1"
+            android:textColor="@color/widget_muted"
+            android:textSize="18sp" />
+
+        <ImageView
+            android:id="@+id/widget_speak"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="@drawable/widget_speak_bg"
+            android:contentDescription="念一下今天的事"
+            android:padding="10dp"
+            android:src="@drawable/ic_speak" />
+    </LinearLayout>
+
+    <!-- 名称牌：待做是橙色底，大字写事项名；做完是绿色底，换成蹦跳的小牛崽 -->
+    <LinearLayout
+        android:id="@+id/widget_badge"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="10dp"
+        android:layout_weight="4"
+        android:background="@drawable/widget_badge_pending"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="16dp"
+        android:paddingTop="6dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="6dp">
+
+        <!-- 逐帧动画：小组件里只有 ViewFlipper 能自己动，桌面可见时才翻页，不耗电 -->
+        <ViewFlipper
+            android:id="@+id/widget_calf"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:autoStart="true"
+            android:flipInterval="350"
+            android:visibility="gone">
+
+            <ImageView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:importantForAccessibility="no"
+                android:src="@drawable/calf_0" />
+
+            <ImageView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:importantForAccessibility="no"
+                android:src="@drawable/calf_1" />
+
+            <ImageView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:importantForAccessibility="no"
+                android:src="@drawable/calf_2" />
+
+            <ImageView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:importantForAccessibility="no"
+                android:src="@drawable/calf_3" />
+        </ViewFlipper>
+
+        <TextView
+            android:id="@+id/widget_big"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:autoSizeMaxTextSize="120sp"
+            android:autoSizeMinTextSize="22sp"
+            android:autoSizeTextType="uniform"
+            android:gravity="center_vertical|start"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:textColor="@color/widget_accent"
+            android:textSize="40sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/widget_sub"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:gravity="end|center_vertical"
+            android:lineSpacingExtra="2dp"
+            android:maxLines="2"
+            android:textColor="@color/widget_ink"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/widget_footer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:ellipsize="end"
+        android:gravity="center"
+        android:maxLines="1"
+        android:textColor="@color/widget_muted"
+        android:textSize="13sp" />
+</LinearLayout>

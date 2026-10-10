@@ -70,3 +70,20 @@ curl -i -H "Authorization: Bearer <FAMILY_KEY>" $URL/api/ping  # 200
 ```
 
 浏览器打开 `$URL`，用家长邮箱登录 Access 后，页面显示“已连接，当前身份：…”。
+
+## 6. 奶奶的 App（P3）
+
+1. **拿安装包**：GitHub → Actions → Android → 最新一次绿色的运行 → 页面底部 Artifacts 里下载 `zaizai-board-apk`（zip，解压出 `.apk`，固定签名的正式包）。
+   正式版本打 `v*` tag（与 `versionName` 一致，如 `v0.2`）后在 Releases 里下载。
+   - 固定签名需要先在 GitHub → Settings → Secrets and variables → Actions 里配好 `RELEASE_KEYSTORE_BASE64`、`RELEASE_STORE_PASSWORD`、`RELEASE_KEY_ALIAS`、`RELEASE_KEY_PASSWORD`。
+     没配时只有 `zaizai-board-debug-apk`，每次构建的签名都不同，**不能覆盖安装**。
+   - 签名密钥文件（`.jks`）和密码要另外妥善保存，丢了就没法给已装的 App 升级，只能卸载重装。
+2. **安装**：把 `.apk` 发到奶奶手机（微信文件传输助手、数据线都行），点开安装；系统提示“未知来源”时按提示允许一次。
+3. **首次设置**（家长来填）：
+   - 服务器地址：Worker 的地址，如 `zaizai-board.<子域>.workers.dev`（不用写 `https://` 和 `/api`）。
+   - 家庭口令：第 3 步设的 `FAMILY_KEY`。
+   - 我是谁：从网页“设置”里的照护人名单选，或者直接填名字。
+   - 语音播报：默认打开，打开 App 时念出还没做的事（最多 3 件）。
+4. **桌面小组件**：长按桌面 → 小组件 → 找到“崽崽小看板”拖到桌面。上面是大时钟和日期，可以代替系统时钟；下面大字显示下一件该做的事，都做完了会换成一只蹦跳的小牛崽。日期右边的橙色喇叭点一下，会念出今天还剩的事。
+5. **提醒**：首次打开会请求通知权限，允许后到点还没登记会提醒一次（到点后 2 小时内，过了就不再弹，只在看板上显示）。提醒依赖系统后台调度，可能晚几分钟；
+   部分国产系统需要在“电池 / 后台管理”里允许崽崽小看板后台运行。

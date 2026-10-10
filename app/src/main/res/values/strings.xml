@@ -1,4 +1,4 @@
 <resources>
     <string name="app_name">崽崽小看板</string>
-    <string name="placeholder_building">正在搭建中，很快就能看到今天的事。</string>
+    <string name="widget_description">大时钟 + 大字显示下一件该做的事，点喇叭能念出来，可以代替系统时钟</string>
 </resources>
