@@ -99,12 +99,23 @@ object BoardLogic {
         return "$period$hour$minute"
     }
 
-    /** 到点了还没登记、且还没提醒过的项。 */
+    /** 到点后多久内还提醒：后台每 15 分钟才同步一次，留够余量；过了就不再弹，免得晚上弹早上的事。 */
+    const val NOTICE_WINDOW_MIN = 120
+
+    /** 到点了还没登记、还在提醒时段内、且还没提醒过的项。 */
     fun dueForNotice(board: Board, today: String, nowHhmm: String, notified: Set<String>): List<BoardItem> {
         if (board.date != today) return emptyList()
+        val now = minutes(nowHhmm) ?: return emptyList()
         return board.today.filter {
-            it.status == ItemStatus.PENDING && it.slot <= nowHhmm && board.key(it) !in notified
+            val slot = minutes(it.slot) ?: return@filter false
+            it.status == ItemStatus.PENDING && now - slot in 0 until NOTICE_WINDOW_MIN && board.key(it) !in notified
         }
+    }
+
+    private fun minutes(hhmm: String): Int? {
+        val h = hhmm.substringBefore(':').toIntOrNull() ?: return null
+        val m = hhmm.substringAfter(':', "").toIntOrNull() ?: return null
+        return h * 60 + m
     }
 
     /**

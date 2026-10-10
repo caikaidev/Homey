@@ -119,6 +119,10 @@ class BoardLogicTest {
         assertEquals(listOf("AD"), BoardLogic.dueForNotice(b, "2026-10-10", "08:00", emptySet()).map { it.taskId })
         assertTrue(BoardLogic.dueForNotice(b, "2026-10-10", "09:00", setOf("AD|2026-10-10|08:00")).isEmpty())
         assertTrue(BoardLogic.dueForNotice(b, "2026-10-11", "20:00", emptySet()).isEmpty())
+        // 过了 2 小时就不再提醒（晚上九点不弹上午九点的事）
+        assertEquals(listOf("AD"), BoardLogic.dueForNotice(b, "2026-10-10", "09:59", emptySet()).map { it.taskId })
+        assertTrue(BoardLogic.dueForNotice(b, "2026-10-10", "10:00", emptySet()).isEmpty())
+        assertTrue(BoardLogic.dueForNotice(board(item("AD", "09:00")), "2026-10-10", "21:00", emptySet()).isEmpty())
     }
 
     @Test
