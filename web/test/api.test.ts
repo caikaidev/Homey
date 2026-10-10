@@ -188,6 +188,14 @@ describe('历史', () => {
     expect(statusOf(2)).toMatchObject({ status: 'missed', recorded_by: null });
     expect((await call(dad, 'GET', '/api/history?days=0')).status).toBe(400);
   });
+
+  it('试用复盘汇总最近 7 天', async () => {
+    const res = await call(dad, 'GET', '/api/review');
+    expect(res.status).toBe(200);
+    expect(res.body.days).toHaveLength(7);
+    expect(res.body).toMatchObject({ to: today(), due: expect.any(Number), by_source: expect.any(Object), undone: expect.any(Number) });
+    expect((await call(grandma, 'GET', '/api/review?days=61')).status).toBe(400);
+  });
 });
 
 describe('设置与解析', () => {
