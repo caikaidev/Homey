@@ -7,10 +7,10 @@
 ```bash
 cd web
 npx wrangler login
-npx wrangler d1 create zaizai-board
+npx wrangler d1 create <数据库名>   # 也可以在 Dashboard 手动建，名字随意
 ```
 
-把输出里的 `database_id` 填进 `web/wrangler.toml`（替换全 0 的占位），提交到 main。
+把 `database_id` 和数据库名分别填进 `web/wrangler.toml` 的 `database_id`、`database_name`，提交到 main。
 `database_id` 不是密钥，可以进仓库。
 
 然后建表：

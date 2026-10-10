@@ -15,8 +15,8 @@ run_worker_first = ["/api/*"]
 
 [[d1_databases]]
 binding = "DB"
-database_name = "zaizai-board"
-# 建库后替换：npx wrangler d1 create zaizai-board
+database_name = "niuniu"
+# 数据库名可以自定义（这里是 niuniu），代码只通过 binding "DB" 访问
 database_id = "6a55fb9e-a282-4e59-abda-8ca48b30fca5"
 migrations_dir = "migrations"
 
