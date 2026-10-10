@@ -240,9 +240,9 @@ describe('Gemini 解析', () => {
   }
 
   it('B4 用 Gemini 解析，Key 只在服务端请求头里，用药加医嘱提醒', async () => {
-    let seen: { url: string; key: string | null } | null = null;
+    let seen: { url: string; key: string | null; body: any } | null = null;
     gemini = (url, init) => {
-      seen = { url, key: new Headers(init?.headers).get('x-goog-api-key') };
+      seen = { url, key: new Headers(init?.headers).get('x-goog-api-key'), body: JSON.parse(String(init?.body)) };
       return geminiText({
         title: '感冒药', kind: 'medicine', type: 'daily', times: ['08:00', '13:00', '19:00'],
         start: today(), end: addDays(today(), 2), warnings: ['没说具体时间，按常见时间填写'],
@@ -252,6 +252,7 @@ describe('Gemini 解析', () => {
     expect(status).toBe(200);
     expect(seen!.url).toContain('/models/gemini-3.8-flash:generateContent');
     expect(seen!.key).toBe('test-gemini-key');
+    expect(seen!.body.generationConfig.thinkingConfig).toEqual({ thinkingLevel: 'low' });
     expect(body).toMatchObject({
       source: 'gemini', title: '感冒药', kind: 'medicine',
       schedule: { type: 'daily', times: ['08:00', '13:00', '19:00'], end: addDays(today(), 2) },

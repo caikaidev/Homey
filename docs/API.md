@@ -140,6 +140,6 @@ App 对事项和设置只读；只有家长能调用标注 **家长** 的接口�
   "preview": [ { "date": "2026-10-10", "times": ["08:00"] }, … ], "warnings": [] }
 ```
 
-- 配了 `GEMINI_API_KEY` 时先用 Gemini（`source: "gemini"`）。没配 Key、超时（8 秒）、出错或返回的排期不合法时，降级为规则解析（`source: "rules"`），并在 `warnings` 第一条说明原因。
+- 配了 `GEMINI_API_KEY` 时先用 Gemini（`source: "gemini"`）。没配 Key、超时（15 秒）、出错或返回的排期不合法时，降级为规则解析（`source: "rules"`），并在 `warnings` 第一条说明原因。
 - `kind`：`supplement` | `medicine`；用药时 `warnings` 一定含“请按医嘱核对剂量与疗程”。
 - `preview` 从今天和 `start` 中较晚的一天起算。
