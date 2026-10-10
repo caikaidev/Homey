@@ -51,10 +51,11 @@ Zero Trust → Access → Applications → Add → Self-hosted：
 2. **策略**：Allow，Include → Emails → 填爸爸、妈妈的邮箱。
 3. **再加一个应用**：同一域名，路径 `api/*`，策略 Action 选 **Bypass**，Include → Everyone。
    这样 App 调 `/api/*` 不会被 Access 拦，由 Worker 自己校验 `FAMILY_KEY`；浏览器访问 `/api/*` 时仍会带上 Access 登录信息。
-4. 记下：
-   - 团队域名：Zero Trust → Settings → Custom Pages 里的 `https://<team>.cloudflareaccess.com`
-   - 整站应用的 **Application Audience (AUD) Tag**
-   填进 `web/wrangler.toml` 的 `ACCESS_TEAM_DOMAIN` 和 `ACCESS_AUD`，提交到 main。
+4. 记下两个值，填进 `web/wrangler.toml` 的 `ACCESS_TEAM_DOMAIN` 和 `ACCESS_AUD`，提交到 main：
+   - **团队域名**（形如 `https://<team>.cloudflareaccess.com`）：Zero Trust → Settings（General / Custom Pages）里的 Team domain。
+     最省事的办法：配好 Access 后用无痕窗口打开网站，被跳转到的登录页地址开头就是它。
+   - **AUD**（一长串十六进制）：Access → Applications → 点**整站那个应用** → Configure → Overview 里的 Application Audience (AUD) Tag。
+     注意要整站应用的，不是 `api/*` 那个 Bypass 应用的。
 
 > 注意：`/api/*` 设了 Bypass 后，Worker 校验 Access JWT 是家长身份的唯一依据，所以 `ACCESS_AUD` 必须填对。
 

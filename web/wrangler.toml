@@ -17,7 +17,7 @@ run_worker_first = ["/api/*"]
 binding = "DB"
 database_name = "zaizai-board"
 # 建库后替换：npx wrangler d1 create zaizai-board
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "6a55fb9e-a282-4e59-abda-8ca48b30fca5"
 migrations_dir = "migrations"
 
 [vars]
