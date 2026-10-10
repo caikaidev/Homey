@@ -16,7 +16,7 @@ export interface GeminiParseResult {
 
 export class GeminiError extends Error {}
 
-const TIMEOUT_MS = 8000;
+const TIMEOUT_MS = 15000;
 const ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models';
 
 const RESPONSE_SCHEMA = {
@@ -61,7 +61,13 @@ export async function parseWithGemini(text: string, today: string, env: Env): Pr
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY },
       body: JSON.stringify({
         contents: [{ role: 'user', parts: [{ text: prompt(text, today) }] }],
-        generationConfig: { responseMimeType: 'application/json', responseSchema: RESPONSE_SCHEMA, temperature: 0 },
+        generationConfig: {
+          responseMimeType: 'application/json',
+          responseSchema: RESPONSE_SCHEMA,
+          temperature: 0,
+          // Flash 默认会先“思考”，常常超过超时；排期这种简单转换用 low 就够，也快得多。
+          thinkingConfig: { thinkingLevel: 'low' },
+        },
       }),
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
