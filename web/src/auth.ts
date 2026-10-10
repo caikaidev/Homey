@@ -9,7 +9,9 @@ const MAX_NAME_LENGTH = 20;
 /**
  * /api/* 鉴权，二选一：
  * - App：`Authorization: Bearer <FAMILY_KEY>`，记录人取 `X-Recorder`（URL 编码的显示名）。
- * - Web：Cloudflare Access 注入的 `Cf-Access-Jwt-Assertion`，校验签名、AUD 与签发方。
+ * - Web：Cloudflare Access 的 JWT，校验签名、AUD 与签发方。优先读 Access 注入的
+ *   `Cf-Access-Jwt-Assertion` 头；/api/* 被 Access 放行（Bypass）时不会注入这个头，
+ *   这时读浏览器随请求带上的 `CF_Authorization` cookie（同一个 JWT）。
  */
 export const requireActor: MiddlewareHandler<AppEnv> = async (c, next) => {
   const actor = (await actorFromFamilyKey(c.req.raw, c.env)) ?? (await actorFromAccess(c.req.raw, c.env));
@@ -41,7 +43,7 @@ function recorderName(raw: string | null): string {
 const jwksCache = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
 
 async function actorFromAccess(req: Request, env: Env): Promise<Actor | null> {
-  const token = req.headers.get('Cf-Access-Jwt-Assertion');
+  const token = req.headers.get('Cf-Access-Jwt-Assertion') ?? accessCookie(req);
   const team = env.ACCESS_TEAM_DOMAIN?.replace(/\/+$/, '');
   if (!token || !team || !env.ACCESS_AUD) return null;
   let jwks = jwksCache.get(team);
@@ -58,6 +60,19 @@ async function actorFromAccess(req: Request, env: Env): Promise<Actor | null> {
   } catch {
     return null;
   }
+}
+
+function accessCookie(req: Request): string | null {
+  // cookie 会随跨站的表单 POST 一起发出；写操作只接受同源请求，防 CSRF。
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    const origin = req.headers.get('Origin');
+    if (!origin || origin !== new URL(req.url).origin) return null;
+  }
+  for (const part of (req.headers.get('Cookie') ?? '').split(';')) {
+    const [name, ...rest] = part.trim().split('=');
+    if (name === 'CF_Authorization') return rest.join('=') || null;
+  }
+  return null;
 }
 
 /** 先各自做 SHA-256 再逐字节比较，避免长度和内容通过耗时泄露。 */
