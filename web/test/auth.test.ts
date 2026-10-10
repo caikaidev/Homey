@@ -36,6 +36,11 @@ describe('/api 鉴权', () => {
     expect(res.status).toBe(401);
   });
 
+  it('未配置 Access 时，伪造的 CF_Authorization cookie 不被接受', async () => {
+    const res = await call('/api/ping', { headers: { Cookie: 'CF_Authorization=forged.jwt.token' } });
+    expect(res.status).toBe(401);
+  });
+
   it('未知的 /api 路径鉴权后返回 JSON 404', async () => {
     const res = await call('/api/nope', { headers: { Authorization: `Bearer ${KEY}` } });
     expect(res.status).toBe(404);
