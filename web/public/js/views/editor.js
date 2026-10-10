@@ -7,15 +7,15 @@ import { addDays, esc, errorView, icons, md, toast, todayBiz, weekdayOf } from '
  */
 export async function editor(el, taskId) {
   const isEdit = Boolean(taskId);
-  let form = null; // { title, every, times[], start, note }
+  let form = null; // { title, kind, freq: '1'|'2'|'n'|'w', every, weekdays[], times[], start, end, note }
   let warnings = [];
   let saving = false;
+  let source = null;
 
   if (isEdit) {
     try {
       const { task } = await api(`/tasks/${encodeURIComponent(taskId)}`);
-      const s = task.schedule;
-      form = { title: task.title, every: s.type === 'daily' ? 1 : s.every, times: [...s.times], start: s.start, note: task.note };
+      form = fromSchedule(task.schedule, { title: task.title, kind: task.kind, note: task.note });
     } catch (err) {
       el.innerHTML = errorView(err);
       return;
@@ -23,22 +23,28 @@ export async function editor(el, taskId) {
   }
 
   function blank() {
-    return { title: '', every: 1, times: ['08:00'], start: todayBiz(), note: '' };
+    return fromSchedule({ type: 'daily', start: todayBiz(), times: ['08:00'] }, { title: '', kind: 'supplement', note: '' });
   }
 
   function schedule() {
     const times = [...new Set(form.times.filter(Boolean))].sort();
-    return form.every > 1
-      ? { type: 'interval_days', every: form.every, start: form.start, times }
-      : { type: 'daily', start: form.start, times };
+    const base = { start: form.start, times, ...(form.end ? { end: form.end } : {}) };
+    if (form.freq === 'w') return { type: 'weekdays', weekdays: [...form.weekdays].sort(), ...base };
+    if (form.freq === '1') return { type: 'daily', ...base };
+    return { type: 'interval_days', every: form.freq === '2' ? 2 : form.every, ...base };
   }
 
   function describe(s) {
-    const when = s.type === 'daily' ? '每天' : s.every === 2 ? '隔天' : `每 ${s.every} 天`;
-    const from = s.start === todayBiz() ? '今天' : s.start === addDays(todayBiz(), 1) ? '明天' : md(s.start);
+    const when =
+      s.type === 'daily' ? '每天'
+      : s.type === 'weekdays' ? (s.weekdays.length ? `每周${s.weekdays.map((d) => WD[d]).join('、')}` : '每周（还没选哪天）')
+      : s.every === 2 ? '隔天' : `每 ${s.every} 天`;
+    const day = (d) => (d === todayBiz() ? '今天' : d === addDays(todayBiz(), 1) ? '明天' : md(d));
+    const from = day(s.start);
+    const until = s.end ? `，${day(s.end)}结束` : '';
     return `${esc(form.title || '（未命名）')}，<span style="color:var(--warn)">${when}</span> ${
       s.times.length ? `<span style="color:var(--warn)">${s.times.join('、')}</span>` : '（还没填时间）'
-    }，从${from}开始`;
+    }，从${from}开始${until}`;
   }
 
   function preview(s) {
@@ -46,21 +52,25 @@ export async function editor(el, taskId) {
     return Array.from({ length: 7 }, (_, i) => {
       const date = addDays(from, i);
       const diff = Math.round((Date.parse(date) - Date.parse(s.start)) / 86400000);
-      const on = diff >= 0 && (s.type === 'daily' || diff % s.every === 0) && s.times.length > 0;
+      const hit =
+        s.type === 'daily' ? true
+        : s.type === 'weekdays' ? s.weekdays.includes(new Date(`${date}T00:00:00Z`).getUTCDay())
+        : diff % s.every === 0;
+      const on = diff >= 0 && (!s.end || date <= s.end) && hit && s.times.length > 0;
       return `<div class="d ${on ? 'on' : ''}"><span class="wd">${weekdayOf(date)}</span><span class="day">${+date.slice(8)}</span>
         <span class="mark">${on ? esc(s.times.length > 1 ? `${s.times.length} 次` : s.times[0]) : '—'}</span></div>`;
     }).join('');
   }
 
   function freqValue() {
-    return form.every === 1 ? '1' : form.every === 2 ? '2' : 'n';
+    return form.freq;
   }
 
   function drawForm() {
     const s = schedule();
     return `<section class="card" aria-label="核对">
       <div class="row"><h2 class="grow" style="font-size:16px">${isEdit ? '修改' : '请核对'}</h2>
-        ${warnings.length || isEdit ? '' : '<span class="tag">解析结果 · 仅供核对</span>'}</div>
+        ${isEdit || !source ? '' : `<span class="tag">${source === 'gemini' ? 'AI 解析' : '规则解析'} · 仅供核对</span>`}</div>
       <p class="describe" data-describe style="margin:0">${describe(s)}</p>
       ${warnings.map((w) => `<div class="note" role="note">${icons.warn}<div>${esc(w)}</div></div>`).join('')}
       <div class="grid2">
@@ -70,6 +80,7 @@ export async function editor(el, taskId) {
             <option value="1" ${freqValue() === '1' ? 'selected' : ''}>每天</option>
             <option value="2" ${freqValue() === '2' ? 'selected' : ''}>隔天</option>
             <option value="n" ${freqValue() === 'n' ? 'selected' : ''}>每 N 天</option>
+            <option value="w" ${freqValue() === 'w' ? 'selected' : ''}>每周几</option>
           </select></label>
         ${
           freqValue() === 'n'
@@ -77,6 +88,18 @@ export async function editor(el, taskId) {
             : `<label class="field">开始<input name="start" type="date" value="${esc(form.start)}"></label>`
         }
         ${freqValue() === 'n' ? `<label class="field span2">开始<input name="start" type="date" value="${esc(form.start)}"></label>` : ''}
+        ${
+          freqValue() === 'w'
+            ? `<div class="field span2">每周哪几天<div class="chips">${[1, 2, 3, 4, 5, 6, 0]
+                .map(
+                  (d) => `<label class="chip ${form.weekdays.includes(d) ? 'on' : ''}"><input type="checkbox" data-wd="${d}" ${
+                    form.weekdays.includes(d) ? 'checked' : ''
+                  } class="sr-only">周${WD[d]}</label>`,
+                )
+                .join('')}</div></div>`
+            : ''
+        }
+        <label class="field span2">结束日期（可不填，如吃 3 天）<input name="end" type="date" value="${esc(form.end)}" min="${esc(form.start)}"></label>
         <div class="field span2">时间
           <div class="times">
             ${form.times
@@ -145,8 +168,8 @@ export async function editor(el, taskId) {
     btn.textContent = '解析中…';
     try {
       const r = await api('/parse', { method: 'POST', body: { text } });
-      const s = r.schedule;
-      form = { title: r.title, every: s.type === 'daily' ? 1 : s.every, times: [...s.times], start: s.start, note: '' };
+      form = fromSchedule(r.schedule, { title: r.title, kind: r.kind, note: '' });
+      source = r.source;
       warnings = r.warnings;
     } catch (err) {
       form = form ?? blank();
@@ -161,7 +184,17 @@ export async function editor(el, taskId) {
     if (saving) return;
     const err = el.querySelector('[data-error]');
     const s = schedule();
-    const problem = !form.title.trim() ? '请填写名称' : !s.times.length ? '至少要有一个时间' : !form.start ? '请选择开始日期' : '';
+    const problem = !form.title.trim()
+      ? '请填写名称'
+      : !s.times.length
+        ? '至少要有一个时间'
+        : !form.start
+          ? '请选择开始日期'
+          : s.type === 'weekdays' && !s.weekdays.length
+            ? '请选每周哪几天'
+            : s.end && s.end < s.start
+              ? '结束日期不能早于开始日期'
+              : '';
     if (problem) {
       err.textContent = problem;
       err.hidden = false;
@@ -171,7 +204,7 @@ export async function editor(el, taskId) {
     const btn = el.querySelector('[data-save]');
     btn.disabled = true;
     try {
-      const body = { title: form.title.trim(), schedule: s, note: form.note.trim() };
+      const body = { title: form.title.trim(), schedule: s, note: form.note.trim(), ...(isEdit ? {} : { kind: form.kind }) };
       if (isEdit) await api(`/tasks/${encodeURIComponent(taskId)}`, { method: 'PATCH', body });
       else await api('/tasks', { method: 'POST', body });
       toast(isEdit ? '已保存' : '已新建');
@@ -190,6 +223,12 @@ export async function editor(el, taskId) {
     if (t.name === 'title') form.title = t.value;
     else if (t.name === 'note') form.note = t.value;
     else if (t.name === 'start') form.start = t.value;
+    else if (t.name === 'end') form.end = t.value;
+    else if (t.dataset.wd !== undefined) {
+      const d = +t.dataset.wd;
+      form.weekdays = t.checked ? [...new Set([...form.weekdays, d])] : form.weekdays.filter((x) => x !== d);
+      t.closest('.chip').classList.toggle('on', t.checked);
+    }
     else if (t.name === 'every') form.every = Math.min(30, Math.max(2, parseInt(t.value, 10) || 2));
     else if (t.dataset.time !== undefined) form.times[+t.dataset.time] = t.value;
     else return;
@@ -198,7 +237,9 @@ export async function editor(el, taskId) {
   el.onchange = (e) => {
     if (e.target.name !== 'freq') return;
     const v = e.target.value;
-    form.every = v === '1' ? 1 : v === '2' ? 2 : Math.max(form.every, 3);
+    form.freq = v;
+    if (v === 'n') form.every = Math.max(form.every, 3);
+    if (v === 'w' && !form.weekdays.length) form.weekdays = [1, 3, 5];
     redrawForm();
   };
   el.onclick = (e) => {
@@ -208,6 +249,7 @@ export async function editor(el, taskId) {
     else if (t.hasAttribute('data-manual')) {
       form = blank();
       warnings = [];
+      source = null;
       draw();
       el.querySelector('[name=title]').focus();
     } else if (t.hasAttribute('data-add-time')) {
@@ -249,4 +291,19 @@ export async function editor(el, taskId) {
 
 function speechSupported() {
   return Boolean(window.SpeechRecognition || window.webkitSpeechRecognition);
+}
+
+const WD = ['日', '一', '二', '三', '四', '五', '六'];
+
+/** 服务端排期 → 表单状态。 */
+function fromSchedule(s, extra) {
+  return {
+    ...extra,
+    freq: s.type === 'daily' ? '1' : s.type === 'weekdays' ? 'w' : s.every === 2 ? '2' : 'n',
+    every: s.type === 'interval_days' ? s.every : 3,
+    weekdays: s.type === 'weekdays' ? [...s.weekdays] : [],
+    times: [...s.times],
+    start: s.start,
+    end: s.end ?? '',
+  };
 }

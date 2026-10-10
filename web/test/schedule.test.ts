@@ -69,4 +69,27 @@ describe('排期', () => {
     expect(describeSchedule({ ...ad, every: 3, times: ['08:00', '19:00'] })).toBe('每 3 天 08:00、19:00（10月30日起）');
     expect(describeSchedule({ type: 'daily', start: '2026-10-10', times: ['19:00'] })).toBe('每天 19:00（10月10日起）');
   });
+
+  it('每周几：只在这几天出现', () => {
+    const s: Schedule = { type: 'weekdays', weekdays: [1, 3, 5], start: '2026-10-10', times: ['08:00'] };
+    // 2026-10-10 周六 … 10-16 周五
+    expect(previewSchedule(s, '2026-10-10', 7).map((d) => d.times.length)).toEqual([0, 0, 1, 0, 1, 0, 1]);
+    expect(describeSchedule(s)).toBe('每周一、三、五 08:00（10月10日起）');
+    expect(describeSchedule({ ...s, weekdays: [1, 2, 3, 4, 5] })).toMatch(/^工作日/);
+  });
+
+  it('结束日期：最后一天含当天，之后不再出现', () => {
+    const s: Schedule = { type: 'daily', start: '2026-10-30', end: '2026-11-01', times: ['08:00', '13:00', '19:00'] };
+    expect(['2026-10-30', '2026-11-01', '2026-11-02'].map((d) => occursOn(s, d))).toEqual([true, true, false]);
+    expect(describeSchedule(s)).toBe('每天 08:00、13:00、19:00（10月30日起，到11月1日）');
+  });
+
+  it('校验 weekdays 与 end', () => {
+    const base = { start: '2026-10-10', times: ['08:00'] };
+    expect(parseSchedule({ ...base, type: 'weekdays', weekdays: [5, 1, 1] })).toEqual({ ...base, type: 'weekdays', weekdays: [1, 5] });
+    expect(parseSchedule({ ...base, type: 'weekdays', weekdays: [] })).toBeTypeOf('string');
+    expect(parseSchedule({ ...base, type: 'weekdays', weekdays: [7] })).toBeTypeOf('string');
+    expect(parseSchedule({ ...base, type: 'daily', end: '2026-10-09' })).toBeTypeOf('string');
+    expect(parseSchedule({ ...base, type: 'daily', end: '' })).toEqual({ ...base, type: 'daily' });
+  });
 });
