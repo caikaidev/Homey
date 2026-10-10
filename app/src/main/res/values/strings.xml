@@ -1,3 +1,4 @@
 <resources>
-    <string name="app_name">家小满</string>
+    <string name="app_name">崽崽小看板</string>
+    <string name="placeholder_building">正在搭建中，很快就能看到今天的事。</string>
 </resources>

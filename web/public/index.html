@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>崽崽小看板</title>
+<style>
+  :root { --bg: #F3F5F0; --ink: #1C2420; --muted: #55605A; --line: #DDE3DC; --ok: #134A40; --warn: #9A3412; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: system-ui, -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; }
+  main { max-width: 480px; margin: 0 auto; padding: 32px 16px; display: flex; flex-direction: column; gap: 12px; }
+  h1 { margin: 0; font-size: 26px; }
+  .card { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 16px; }
+  .muted { color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <h1>崽崽小看板</h1>
+  <p class="muted">正在搭建中（P0）。</p>
+  <div class="card" id="status">正在检查连接…</div>
+</main>
+<script type="module">
+  const el = document.getElementById('status');
+  try {
+    const res = await fetch('/api/ping', { credentials: 'same-origin' });
+    if (res.ok) {
+      const data = await res.json();
+      el.textContent = `已连接，当前身份：${data.actor.name}`;
+      el.style.color = 'var(--ok)';
+    } else {
+      el.textContent = `未登录（${res.status}）`;
+      el.style.color = 'var(--warn)';
+    }
+  } catch {
+    el.textContent = '连接失败';
+    el.style.color = 'var(--warn)';
+  }
+</script>
+</body>
+</html>

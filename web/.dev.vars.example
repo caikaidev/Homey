@@ -1,0 +1,2 @@
+# 复制为 .dev.vars 供 `npm run dev` 本地使用（.dev.vars 不进仓库）
+FAMILY_KEY=local-dev-key

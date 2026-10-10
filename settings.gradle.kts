@@ -22,6 +22,6 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "Homey"
+rootProject.name = "ZaiZaiBoard"
 
 include(":app")
