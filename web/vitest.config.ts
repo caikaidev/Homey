@@ -8,7 +8,8 @@ export default defineConfig(async () => {
       cloudflareTest({
         wrangler: { configPath: './wrangler.toml' },
         miniflare: {
-          bindings: { FAMILY_KEY: 'test-family-key', TEST_MIGRATIONS: migrations },
+          // 测试不连真实的 Access：清空团队域名与 AUD。
+          bindings: { FAMILY_KEY: 'test-family-key', ACCESS_TEAM_DOMAIN: '', ACCESS_AUD: '', TEST_MIGRATIONS: migrations },
         },
       }),
     ],
