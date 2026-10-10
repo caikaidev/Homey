@@ -1,5 +1,11 @@
 package ian.dev.zaizai.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -26,6 +32,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
@@ -51,6 +59,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ian.dev.zaizai.R
@@ -90,7 +99,7 @@ fun BoardScreen(
             .background(ZaiZai.colors.background)
             .safeDrawingPadding(),
     ) {
-        Header(board, onRefresh, onSettings)
+        Header(board, BoardLogic.greeting(BizDate.hhmm(now)), onRefresh, onSettings)
         StatusBar(state, now)
         if (board == null) {
             EmptyState(state, onRefresh)
@@ -105,6 +114,7 @@ fun BoardScreen(
                 ItemCard(
                     item = item,
                     queued = board.key(item) in state.queued,
+                    praise = BoardLogic.praise(board.key(item)),
                     undoMs = BoardLogic.undoRemainingMs(item, state.config.recorder, now),
                     onCheckin = { onCheckin(item) },
                     onUndo = { onUndo(item) },
@@ -126,7 +136,7 @@ fun BoardScreen(
 }
 
 @Composable
-private fun Header(board: Board?, onRefresh: () -> Unit, onSettings: () -> Unit) {
+private fun Header(board: Board?, greeting: String, onRefresh: () -> Unit, onSettings: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -139,7 +149,7 @@ private fun Header(board: Board?, onRefresh: () -> Unit, onSettings: () -> Unit)
             )
             if (board != null) {
                 Text(
-                    text = "${BizDate.monthDay(board.date)} ${board.weekday}",
+                    text = "${BizDate.monthDay(board.date)} ${board.weekday} · $greeting",
                     style = MaterialTheme.typography.bodyLarge,
                     color = ZaiZai.colors.muted,
                 )
@@ -209,41 +219,81 @@ private fun EmptyState(state: BoardState, onRefresh: () -> Unit) {
     }
 }
 
+/** 顶上一句话 + 一排小爱心（做完一件点亮一颗）；还有事时小牛崽在旁边晃着等，都做完了它开心地蹦。 */
 @Composable
 private fun Summary(board: Board) {
     val pending = board.pendingCount
-    Column {
-        if (pending == 0) CalfDance(Modifier.fillMaxWidth().height(180.dp))
-        Text(
-            text = when {
-                board.today.isEmpty() -> "今天没有要做的事"
-                pending == 0 -> "今天的都做完了"
-                else -> "还剩 $pending 件"
-            },
-            fontSize = 40.sp,
-            lineHeight = 48.sp,
-            fontWeight = FontWeight.Bold,
-            color = if (pending > 0) ZaiZai.colors.pending else ZaiZai.colors.done,
-            modifier = Modifier.padding(vertical = 4.dp),
-        )
+    val total = board.today.size
+    val colors = ZaiZai.colors
+    if (pending == 0) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+            CalfAnimation(CALF_DANCE, 350, Modifier.fillMaxWidth().height(180.dp))
+            Text(
+                text = if (total == 0) "今天没有要做的事" else "今天的都做完了",
+                fontSize = 40.sp,
+                lineHeight = 48.sp,
+                fontWeight = FontWeight.Bold,
+                color = colors.done,
+                textAlign = TextAlign.Center,
+            )
+            if (total > 0) Hearts(done = total, total = total, modifier = Modifier.padding(top = 8.dp))
+        }
+        return
+    }
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
+        CalfAnimation(CALF_WAIT, 700, Modifier.size(96.dp))
+        Spacer(Modifier.width(12.dp))
+        Column {
+            Text(
+                text = "还剩 $pending 件",
+                fontSize = 40.sp,
+                lineHeight = 48.sp,
+                fontWeight = FontWeight.Bold,
+                color = colors.pending,
+            )
+            Hearts(done = total - pending, total = total, modifier = Modifier.padding(top = 4.dp))
+        }
     }
 }
 
-private val CALF_FRAMES = intArrayOf(R.drawable.calf_0, R.drawable.calf_1, R.drawable.calf_2, R.drawable.calf_3)
+private val HEART = Color(0xFFE8556D)
+private const val MAX_HEARTS = 10
 
-/** 都做完了：小牛崽开心地蹦跳，和小组件用同一组帧。 */
 @Composable
-private fun CalfDance(modifier: Modifier = Modifier) {
+private fun Hearts(done: Int, total: Int, modifier: Modifier = Modifier) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        modifier = modifier.semantics { contentDescription = "做完 $done 件，共 $total 件" },
+    ) {
+        val shown = total.coerceAtMost(MAX_HEARTS)
+        val lit = (done * shown + total - 1) / total.coerceAtLeast(1)
+        repeat(shown) { i ->
+            Icon(
+                imageVector = if (i < lit) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                contentDescription = null,
+                tint = if (i < lit) HEART else ZaiZai.colors.muted,
+                modifier = Modifier.size(28.dp),
+            )
+        }
+    }
+}
+
+/** 小牛崽的帧，和小组件用同一组：跳舞四帧都用，等待只左右歪头。 */
+private val CALF_DANCE = intArrayOf(R.drawable.calf_0, R.drawable.calf_1, R.drawable.calf_2, R.drawable.calf_3)
+private val CALF_WAIT = intArrayOf(R.drawable.calf_0, R.drawable.calf_2)
+
+@Composable
+private fun CalfAnimation(frames: IntArray, intervalMs: Long, modifier: Modifier = Modifier) {
     var frame by remember { mutableIntStateOf(0) }
-    LaunchedEffect(Unit) {
+    LaunchedEffect(frames) {
         while (true) {
-            delay(350)
-            frame = (frame + 1) % CALF_FRAMES.size
+            delay(intervalMs)
+            frame = (frame + 1) % frames.size
         }
     }
     Image(
-        painter = painterResource(CALF_FRAMES[frame]),
-        contentDescription = "开心的小牛崽",
+        painter = painterResource(frames[frame % frames.size]),
+        contentDescription = null,
         modifier = modifier,
     )
 }
@@ -252,6 +302,7 @@ private fun CalfDance(modifier: Modifier = Modifier) {
 private fun ItemCard(
     item: BoardItem,
     queued: Boolean,
+    praise: String,
     undoMs: Long,
     onCheckin: () -> Unit,
     onUndo: () -> Unit,
@@ -299,6 +350,18 @@ private fun ItemCard(
                         style = MaterialTheme.typography.bodyLarge,
                         color = colors.muted,
                     )
+                }
+                // 刚登记完弹出一句夸奖，撤销时间过了就收起
+                AnimatedVisibility(
+                    visible = item.status == ItemStatus.DONE && undoMs > 0,
+                    enter = scaleIn(spring(dampingRatio = Spring.DampingRatioHighBouncy)) + fadeIn(),
+                    exit = fadeOut(),
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Filled.Favorite, contentDescription = null, tint = HEART, modifier = Modifier.size(32.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(praise, fontSize = 30.sp, fontWeight = FontWeight.Bold, color = colors.done)
+                    }
                 }
                 if (undoMs > 0) {
                     OutlinedButton(

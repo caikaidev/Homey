@@ -18,6 +18,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import ian.dev.zaizai.data.BoardItem
 import ian.dev.zaizai.data.BoardLogic
 import ian.dev.zaizai.data.SyncResult
 import ian.dev.zaizai.sync.Notifier
@@ -65,7 +66,10 @@ class MainActivity : ComponentActivity() {
                     BoardScreen(
                         state = state,
                         serverNow = { repository.serverNow() },
-                        onCheckin = { repository.checkin(it) },
+                        onCheckin = {
+                            sayCheckin(it)
+                            repository.checkin(it)
+                        },
                         onUndo = { repository.undo(it) },
                         onRefresh = { lifecycleScope.launch { repository.sync() } },
                         onSettings = { editing = true },
@@ -97,6 +101,14 @@ class MainActivity : ComponentActivity() {
         lastSpokenAt = now
         val s = speaker ?: Speaker(this).also { speaker = it }
         s.speak(BoardLogic.speech(board))
+    }
+
+    private fun sayCheckin(item: BoardItem) {
+        val state = repository.state.value
+        val board = state.board ?: return
+        if (!state.config.speak) return
+        val s = speaker ?: Speaker(this).also { speaker = it }
+        s.speak(BoardLogic.checkinSpeech(board, item))
     }
 
     override fun onStop() {

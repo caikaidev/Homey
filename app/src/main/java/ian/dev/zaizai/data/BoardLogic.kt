@@ -57,6 +57,28 @@ object BoardLogic {
         return "${board.nickname}今天还有${pending.size}件事：$list$more"
     }
 
+    /** 刚点完“确认已喂”时念一句，让长辈知道登记上了；最后一件念得开心一点。 */
+    fun checkinSpeech(board: Board, item: BoardItem): String {
+        val left = board.today.count { it.status == ItemStatus.PENDING && board.key(it) != board.key(item) }
+        return if (left == 0) "${item.title}喂好了，今天的都做完啦，真棒！"
+        else "${item.title}喂好了，还剩${left}件"
+    }
+
+    /** 刚登记完卡片上的夸奖，按实例固定挑一句，免得每秒刷新都换。 */
+    fun praise(key: String): String = PRAISES[Math.floorMod(key.hashCode(), PRAISES.size)]
+
+    private val PRAISES = listOf("真棒！", "辛苦啦！", "崽崽谢谢你！", "又完成一件！", "做得好！")
+
+    /** 页头问候：`07:30` → `早上好`。 */
+    fun greeting(hhmm: String): String = when (hhmm.substringBefore(':').toIntOrNull() ?: 12) {
+        in 5..8 -> "早上好"
+        in 9..10 -> "上午好"
+        in 11..12 -> "中午好"
+        in 13..17 -> "下午好"
+        in 18..21 -> "晚上好"
+        else -> "夜深了，早点休息"
+    }
+
     /** `08:00` → `早上8点`，`19:30` → `晚上7点半`。 */
     fun spokenTime(slot: String): String {
         val h = slot.substringBefore(':').toIntOrNull() ?: return slot

@@ -129,4 +129,16 @@ class BoardLogicTest {
         assertEquals(WidgetContent("都喂好了", "都喂好了\n今天 1 件", done = true), BoardLogic.widgetContent(board(item("早", "07:00", ItemStatus.DONE))))
         assertTrue(BoardLogic.widgetContent(board()).done)
     }
+
+    @Test
+    fun checkinSpeechAndGreeting() {
+        val ad = item("AD", "08:00")
+        val ca = item("钙", "19:00")
+        assertEquals("AD喂好了，还剩1件", BoardLogic.checkinSpeech(board(ad, ca), ad))
+        assertEquals("钙喂好了，今天的都做完啦，真棒！", BoardLogic.checkinSpeech(board(ca), ca))
+        assertEquals("早上好", BoardLogic.greeting("07:30"))
+        assertEquals("下午好", BoardLogic.greeting("15:00"))
+        assertEquals("夜深了，早点休息", BoardLogic.greeting("23:10"))
+        assertEquals(BoardLogic.praise("a|b|c"), BoardLogic.praise("a|b|c"))
+    }
 }
