@@ -4,10 +4,11 @@ import { getSettings, listTasks, type CompletionRow, type Task } from '../db';
 import type { Actor, AppEnv } from '../env';
 import { apiError } from '../errors';
 import { occursOn } from '../schedule';
+import { summarize } from '../review';
 
 /** 登记后多久内可以撤销自己的记录。 */
 export const UNDO_WINDOW_MS = 2 * 60 * 1000;
-const MAX_HISTORY_DAYS = 60;
+export const MAX_HISTORY_DAYS = 60;
 
 export const board = new Hono<AppEnv>();
 
@@ -87,35 +88,38 @@ board.get('/board', async (c) => {
   });
 });
 
+export interface HistoryItem {
+  task_id: string;
+  title: string;
+  slot: string;
+  status: 'done' | 'skipped' | 'missed' | 'pending';
+  reason: string;
+  recorded_by: string | null;
+  recorded_at: number | null;
+  source: string | null;
+}
+
+export interface HistoryDay {
+  date: string;
+  weekday: string;
+  items: HistoryItem[];
+}
+
 /**
  * 最近 N 天（含今天）按日分组的记录。按当前排期补出没登记的实例：今天的标“pending”，
  * 以前的标“missed”。只给进行中的事项补，且不早于事项创建那天。
  */
-board.get('/history', async (c) => {
-  const now = Date.now();
-  const daysRaw = Number(c.req.query('days') ?? 14);
-  if (!Number.isInteger(daysRaw) || daysRaw < 1 || daysRaw > MAX_HISTORY_DAYS) {
-    return apiError(c, 400, 'bad_request', `days 应为 1 到 ${MAX_HISTORY_DAYS} 的整数`);
-  }
+export async function historyDays(db: D1Database, n: number, now: number): Promise<HistoryDay[]> {
   const today = bizDate(now);
-  const from = addDays(today, -(daysRaw - 1));
-  const [allTasks, completions] = await Promise.all([listTasks(c.env.DB), completionsBetween(c.env.DB, from, today)]);
+  const from = addDays(today, -(n - 1));
+  const [allTasks, completions] = await Promise.all([listTasks(db), completionsBetween(db, from, today)]);
   const taskById = new Map(allTasks.map((t) => [t.id, t]));
   const active = allTasks.filter((t) => t.status === 'active');
 
-  const days = [];
-  for (let i = 0; i < daysRaw; i++) {
+  const days: HistoryDay[] = [];
+  for (let i = 0; i < n; i++) {
     const date = addDays(today, -i);
-    const items: {
-      task_id: string;
-      title: string;
-      slot: string;
-      status: 'done' | 'skipped' | 'missed' | 'pending';
-      reason: string;
-      recorded_by: string | null;
-      recorded_at: number | null;
-      source: string | null;
-    }[] = [];
+    const items: HistoryItem[] = [];
     const seen = new Set<string>();
     for (const row of completions) {
       if (row.biz_date !== date) continue;
@@ -148,7 +152,33 @@ board.get('/history', async (c) => {
       }
     }
     items.sort((a, b) => a.slot.localeCompare(b.slot) || a.title.localeCompare(b.title));
-    days.push({ date, weekday: WEEKDAY_NAMES[weekday(date)], items });
+    days.push({ date, weekday: WEEKDAY_NAMES[weekday(date)]!, items });
   }
-  return c.json({ days });
+  return days;
+}
+
+export function parseDays(raw: string | undefined, fallback: number): number | null {
+  const n = Number(raw ?? fallback);
+  return Number.isInteger(n) && n >= 1 && n <= MAX_HISTORY_DAYS ? n : null;
+}
+
+board.get('/history', async (c) => {
+  const n = parseDays(c.req.query('days'), 14);
+  if (n === null) return apiError(c, 400, 'bad_request', `days 应为 1 到 ${MAX_HISTORY_DAYS} 的整数`);
+  return c.json({ days: await historyDays(c.env.DB, n, Date.now()) });
+});
+
+/** 家庭试用复盘（默认最近 7 天）：及时登记率、来源、谁登记、撤销次数等，见 docs/TRIAL.md。 */
+board.get('/review', async (c) => {
+  const n = parseDays(c.req.query('days'), 7);
+  if (n === null) return apiError(c, 400, 'bad_request', `days 应为 1 到 ${MAX_HISTORY_DAYS} 的整数`);
+  const now = Date.now();
+  const today = bizDate(now);
+  const [days, undone] = await Promise.all([
+    historyDays(c.env.DB, n, now),
+    c.env.DB.prepare('SELECT COUNT(*) AS n FROM completions WHERE biz_date BETWEEN ? AND ? AND undone_at IS NOT NULL')
+      .bind(addDays(today, -(n - 1)), today)
+      .first<{ n: number }>(),
+  ]);
+  return c.json(summarize(days, undone?.n ?? 0));
 });
