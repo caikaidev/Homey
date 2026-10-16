@@ -39,6 +39,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -104,7 +105,7 @@ fun BoardScreen(
             .background(ZaiZai.colors.background)
             .safeDrawingPadding(),
     ) {
-        Header(board, "${board?.nickname ?: "崽崽"}今天的$title", BoardLogic.greeting(BizDate.hhmm(now)), onRefresh, onSettings, onBack)
+        Header(board, "${board?.nickname ?: "崽崽"}今天的$title", BoardLogic.greeting(BizDate.hhmm(now)), onRefresh, onSettings, onBack, state.syncing)
         StatusBar(state, now)
         if (board == null) {
             EmptyState(state, onRefresh)
@@ -149,6 +150,7 @@ internal fun Header(
     onRefresh: () -> Unit,
     onSettings: () -> Unit,
     onBack: (() -> Unit)? = null,
+    syncing: Boolean = false,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(start = if (onBack == null) 20.dp else 4.dp, end = 8.dp, top = 12.dp),
@@ -173,8 +175,10 @@ internal fun Header(
                 )
             }
         }
-        IconButton(onClick = onRefresh, modifier = Modifier.size(56.dp)) {
-            Icon(Icons.Filled.Refresh, contentDescription = "刷新", tint = ZaiZai.colors.muted)
+        // 同步中转圈，让人知道点了刷新有反应
+        IconButton(onClick = onRefresh, enabled = !syncing, modifier = Modifier.size(56.dp)) {
+            if (syncing) CircularProgressIndicator(color = ZaiZai.colors.muted, strokeWidth = 3.dp, modifier = Modifier.size(28.dp))
+            else Icon(Icons.Filled.Refresh, contentDescription = "刷新", tint = ZaiZai.colors.muted)
         }
         IconButton(onClick = onSettings, modifier = Modifier.size(56.dp)) {
             Icon(Icons.Filled.Settings, contentDescription = "设置", tint = ZaiZai.colors.muted)

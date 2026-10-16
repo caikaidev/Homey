@@ -81,9 +81,7 @@ class MainActivity : ComponentActivity() {
                             onSettings = { editing = true },
                         )
                         card.type == CardType.IMAGE -> ImageScreen(
-                            title = card.title,
                             file = card.image?.let { repository.imageFile(it) },
-                            syncing = state.syncing,
                             onRetry = refresh,
                             onBack = { page = null },
                         )

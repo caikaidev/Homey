@@ -110,6 +110,7 @@ class BoardRepository(private val app: Context, private val store: LocalStore = 
         }
         home = fetched?.first
         store.writeHome(fetched?.second)
+        publish { it } // 先把新卡片显示出来，图片接着下载
         cacheImages(api, fetched?.first)
     }
 
