@@ -6,6 +6,7 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.os.BatteryManager
 import android.os.Handler
 import android.os.Looper
 import android.util.TypedValue
@@ -20,24 +21,34 @@ import ian.dev.zaizai.data.BoardLogic
 import ian.dev.zaizai.data.BoardState
 import java.util.concurrent.atomic.AtomicBoolean
 
-/** 桌面小组件：大时钟 + 大字显示下一件该做的事，可以代替系统时钟；喇叭按钮念出今天还剩的事。内容来自本机缓存，每次看板状态变化时刷新；点击进入 App（会顺便同步）。 */
+/** 桌面小组件：大时钟 + 大字显示下一件该做的事，可以代替系统时钟；喇叭按钮念出今天还剩的事和手机电量。内容来自本机缓存，每次看板状态变化时刷新；点击进入 App（会顺便同步）。 */
 class BoardWidgetProvider : AppWidgetProvider() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != BoardWidget.ACTION_SPEAK) return super.onReceive(context, intent)
         val app = context.applicationContext as ZaizaiApp
         val board = app.repository.state.value.board
         val now = app.repository.serverNow()
-        val text = when {
+        val body = when {
             board == null -> "${BoardLogic.spokenNow(now)}。还没同步，请打开 App 看看"
             board.date != BizDate.date(now) -> "${BoardLogic.spokenNow(now)}。看板还没换到今天，请打开 App 看看"
             else -> BoardLogic.announce(board, now)
         }
+        // 顺便报电量：奶奶看不清系统状态栏的电池图标
+        val text = battery(context)?.let { (percent, charging) -> "$body。${BoardLogic.spokenBattery(percent, charging)}" } ?: body
         // 等念完再结束广播，免得进程半路被回收；最多等 30 秒
         val result = goAsync()
         val finished = AtomicBoolean(false)
         val finish = { if (finished.compareAndSet(false, true)) result.finish() }
         Handler(Looper.getMainLooper()).postDelayed(finish, 30_000)
         app.voice.speak(text, finish)
+    }
+
+    /** 当前电量（0–100）和是否在充电；读不到返回 null。 */
+    private fun battery(context: Context): Pair<Int, Boolean>? {
+        val manager = context.getSystemService(BatteryManager::class.java) ?: return null
+        val percent = manager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
+        if (percent !in 0..100) return null
+        return percent to manager.isCharging
     }
 
     override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) {
@@ -75,15 +86,12 @@ object BoardWidget {
         if (board == null) {
             badge(context, views, "还没同步", done = false)
             views.setTextViewText(R.id.widget_sub, if (state.config.isComplete) "点这里打开" else "点这里设置")
-            views.setTextViewText(R.id.widget_footer, context.getString(R.string.app_name))
             return views
         }
 
         val content = BoardLogic.widgetContent(board)
         badge(context, views, content.big, content.done)
         views.setTextViewText(R.id.widget_sub, content.sub)
-        val synced = state.syncedAt?.let { BizDate.hhmm(it + state.clockOffset) } ?: "--:--"
-        views.setTextViewText(R.id.widget_footer, if (state.offline) "${board.nickname} · 离线 · 最后同步 $synced" else "${board.nickname} · 最后同步 $synced")
         return views
     }
 

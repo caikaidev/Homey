@@ -49,6 +49,15 @@ object BoardLogic {
     /** 打开 App 或点小组件喇叭时念的整段：先报日期时间，再念今天的事。 */
     fun announce(board: Board, nowMs: Long): String = "${spokenNow(nowMs)}。${speech(board)}"
 
+    /** 电量播报：低于 20% 且没在充电时提醒充电。百分号写成“百分之”，各家 TTS 都念得对。 */
+    fun spokenBattery(percent: Int, charging: Boolean): String = when {
+        charging -> "手机电量百分之$percent，正在充电"
+        percent < LOW_BATTERY -> "手机电量只剩百分之$percent，记得充电"
+        else -> "手机电量百分之$percent"
+    }
+
+    private const val LOW_BATTERY = 20
+
     /** `现在是10月10日星期六，晚上9点31分`。 */
     fun spokenNow(nowMs: Long): String =
         "现在是${BizDate.monthDay(BizDate.date(nowMs))}${BizDate.weekday(nowMs)}，${spokenTime(BizDate.hhmm(nowMs))}"

@@ -147,4 +147,11 @@ class BoardLogicTest {
         assertEquals("夜深了，早点休息", BoardLogic.greeting("23:10"))
         assertEquals(BoardLogic.praise("a|b|c"), BoardLogic.praise("a|b|c"))
     }
+
+    @Test
+    fun spokenBattery() {
+        assertEquals("手机电量百分之80", BoardLogic.spokenBattery(80, charging = false))
+        assertEquals("手机电量只剩百分之15，记得充电", BoardLogic.spokenBattery(15, charging = false))
+        assertEquals("手机电量百分之15，正在充电", BoardLogic.spokenBattery(15, charging = true))
+    }
 }
