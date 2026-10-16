@@ -16,6 +16,7 @@ Worker 测试（`web/test/api.test.ts`）按本文件断言。
 | 403 | `forbidden` | 没权限（App 改事项/设置，撤销别人的登记） |
 | 404 | `not_found` | 不存在 |
 | 409 | `task_inactive` / `undo_expired` | 事项已暂停或归档 / 超过 2 分钟不能撤销 |
+| 413 | `too_large` | 上传的图片超过 1.5MB |
 
 ### 鉴权与记录人
 
@@ -86,6 +87,31 @@ App 对事项和设置只读；只有家长能调用标注 **家长** 的接口�
 - 排序：未登记在前，同组按 `slot`、再按 `priority` 降序。
 - 当天改过排期时，已有的登记仍会出现（时间点保留）。
 
+### `GET /api/home`
+App 首页的大卡片，有数据的类别才出现，顺序固定（补剂、药品、宝宝屋）。顺手删除过期图片。
+
+```json
+{ "date": "2026-10-16", "serverTime": 0, "cards": [
+  { "key": "supplement", "type": "tasks", "title": "补剂", "total": 2, "pending": 1 },
+  { "key": "medicine", "type": "tasks", "title": "药品", "total": 0, "pending": 0 },
+  { "key": "babyroom", "type": "image", "title": "宝宝屋", "image": DayImage }
+] }
+```
+
+- `type: "tasks"`：`key` 即事项的 `kind`，有进行中的该类事项就出现；`total` / `pending` 是今天的实例数和未登记数。点进去看 `/api/board` 里同 `kind` 的项。
+- `type: "image"`：今天有图片才出现。
+
+### 按日期使用的图片（宝宝屋）
+
+DayImage：`{ id, category: "babyroom", use_date, mime, size, created_by, created_at, url: "/api/images/<id>" }`
+
+一个类别一天最多一张。使用日期过了（按 Asia/Shanghai）的图片在下次上传或调用 `/api/home` 时删除。
+
+- `GET /api/images` → `{ images: DayImage[] }`：今天及以后的，按日期排序。
+- `GET /api/images/:id` → 图片本身（`Content-Type` 为图片类型）。每次上传都换新 id，可以长期缓存。
+- `PUT /api/images/:category/:date` · 家长：请求体就是图片（`image/jpeg` | `image/png` | `image/webp`，最多 1.5MB），`date` 不早于今天。同一天已有图片时替换。→ 201 `{ image: DayImage }`
+- `DELETE /api/images/:id` · 家长 → `{ ok: true }`
+
 ### `GET /api/tasks?status=active,paused`
 `{ tasks: Task[] }`。`status` 可多选，默认全部。
 
@@ -96,7 +122,7 @@ App 对事项和设置只读；只有家长能调用标注 **家长** 的接口�
 请求 `{ title, schedule, note?, priority?, kind? }` → 201 `{ task }`
 
 ### `PATCH /api/tasks/:id` · 家长
-请求任意子集 `{ title?, schedule?, note?, priority? }` → `{ task }`。改排期只影响以后，不改已有登记。
+请求任意子集 `{ title?, kind?, schedule?, note?, priority? }` → `{ task }`。改排期只影响以后，不改已有登记。
 
 ### `PATCH /api/tasks/:id/status` · 家长
 请求 `{ status }` → `{ task }`

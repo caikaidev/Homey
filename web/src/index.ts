@@ -3,6 +3,8 @@ import type { AppEnv } from './env';
 import { requireActor } from './auth';
 import { apiError } from './errors';
 import { board } from './api/board';
+import { home } from './api/home';
+import { images } from './api/images';
 import { parse } from './api/parse';
 import { records } from './api/records';
 import { settings } from './api/settings';
@@ -20,6 +22,8 @@ api.get('/ping', (c) => {
 
 api.route('/', board);
 api.route('/', records);
+api.route('/', home);
+api.route('/images', images);
 api.route('/tasks', tasks);
 api.route('/settings', settings);
 api.route('/parse', parse);

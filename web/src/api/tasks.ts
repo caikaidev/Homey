@@ -53,7 +53,7 @@ tasks.post('/', requireParent, async (c) => {
   return c.json({ task: presentTask((await getTask(c.env.DB, id))!) }, 201);
 });
 
-/** 改名称 / 排期 / 备注 / 优先级。改排期只影响以后，已有登记不动。 */
+/** 改名称 / 类别 / 排期 / 备注 / 优先级。改排期只影响以后，已有登记不动。 */
 tasks.patch('/:id', requireParent, async (c) => {
   const task = await getTask(c.env.DB, c.req.param('id'));
   if (!task) return apiError(c, 404, 'not_found', '没有这个事项');
@@ -76,12 +76,16 @@ tasks.patch('/:id', requireParent, async (c) => {
     if (note === null) return apiError(c, 400, 'bad_request', 'note 应为字符串');
     next.note = note;
   }
+  if (body.kind !== undefined) {
+    if (!TASK_KINDS.includes(body.kind as (typeof TASK_KINDS)[number])) return apiError(c, 400, 'bad_request', 'kind 只能是 supplement / medicine');
+    next.kind = body.kind as string;
+  }
   if (body.priority !== undefined) {
     if (typeof body.priority !== 'number' || !Number.isInteger(body.priority)) return apiError(c, 400, 'bad_request', 'priority 应为整数');
     next.priority = body.priority;
   }
-  await c.env.DB.prepare('UPDATE tasks SET title = ?, schedule_json = ?, note = ?, priority = ?, updated_at = ? WHERE id = ?')
-    .bind(next.title, JSON.stringify(next.schedule), next.note, next.priority, Date.now(), task.id)
+  await c.env.DB.prepare('UPDATE tasks SET title = ?, kind = ?, schedule_json = ?, note = ?, priority = ?, updated_at = ? WHERE id = ?')
+    .bind(next.title, next.kind, JSON.stringify(next.schedule), next.note, next.priority, Date.now(), task.id)
     .run();
   return c.json({ task: presentTask((await getTask(c.env.DB, task.id))!) });
 });
