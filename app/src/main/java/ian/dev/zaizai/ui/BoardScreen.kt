@@ -186,40 +186,28 @@ internal fun Header(
     }
 }
 
-/** 同步状态：离线时明确写“离线 · 最后同步 HH:mm”，不假装是最新。 */
+/** 只在有问题时出现一条醒目的提示（口令错、没联网、还没换到今天）；正常时什么都不显示。 */
 @Composable
 internal fun StatusBar(state: BoardState, now: Long) {
-    val synced = state.syncedAt?.let { BizDate.hhmm(it + state.clockOffset) }
     val board = state.board
-    val (text, strong) = when {
-        state.problem != null -> state.problem to true
-        state.offline -> "离线 · 最后同步 ${synced ?: "--:--"}" to true
+    val text = when {
+        state.problem != null -> state.problem
+        state.offline -> "没联网，显示的是之前的数据"
         board != null && board.date != BizDate.date(now) ->
-            "这是${BizDate.monthDay(board.date)}的看板，正在换到今天…" to true
-        state.syncing && synced == null -> "正在同步…" to false
-        synced != null -> "已同步 $synced" to false
+            "这是${BizDate.monthDay(board.date)}的看板，正在换到今天…"
         else -> return
     }
-    if (strong) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.Bold,
-            color = ZaiZai.colors.onOffline,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp)
-                .background(ZaiZai.colors.offline, RoundedCornerShape(12.dp))
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-        )
-    } else {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyMedium,
-            color = ZaiZai.colors.muted,
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
-        )
-    }
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodyLarge,
+        fontWeight = FontWeight.Bold,
+        color = ZaiZai.colors.onOffline,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .background(ZaiZai.colors.offline, RoundedCornerShape(12.dp))
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+    )
 }
 
 @Composable

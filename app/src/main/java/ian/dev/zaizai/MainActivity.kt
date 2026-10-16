@@ -129,10 +129,10 @@ class MainActivity : ComponentActivity() {
         s.speak(BoardLogic.announce(board, repository.serverNow()))
     }
 
+    /** 登记后念一句，让长辈知道登记上了。和“打开时播报”的开关无关，一直念。 */
     private fun sayCheckin(item: BoardItem) {
         val state = repository.state.value
         val board = state.board ?: return
-        if (!state.config.speak) return
         val s = speaker ?: Speaker(this).also { speaker = it }
         s.speak(BoardLogic.checkinSpeech(board, item))
     }

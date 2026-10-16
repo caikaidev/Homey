@@ -85,8 +85,8 @@ class BoardRepository(private val app: Context, private val store: LocalStore = 
             val offset = if (fetched.board.serverTime > 0) fetched.board.serverTime - fetched.receivedAt else 0L
             store.writeSnapshot(fetched.raw, fetched.receivedAt, offset)
             snapshot = Snapshot(fetched.board, fetched.receivedAt, offset)
-            refreshHome(api)
-            publish { it.copy(offline = false, syncing = false, problem = null) }
+            val homeProblem = refreshHome(api)
+            publish { it.copy(offline = false, syncing = false, problem = homeProblem) }
             SyncResult.OK
         } catch (e: IOException) {
             publish { it.copy(offline = true, syncing = false) }
@@ -95,23 +95,30 @@ class BoardRepository(private val app: Context, private val store: LocalStore = 
             val message = if (e.status == 401) "家庭口令不对，请让家长在设置里重新填写" else e.message
             publish { it.copy(offline = false, syncing = false, problem = message) }
             SyncResult.FAILED
+        } finally {
+            // 被取消（App 切到后台）或出了没料到的错时，别让“同步中”一直挂着，刷新键会一直转圈
+            if (_state.value.syncing) publish { it.copy(syncing = false) }
         }
     }
 
     /** 本机缓存的图片文件；还没下载好返回 null。 */
     fun imageFile(image: DayImage): File? = File(imageDir, image.id).takeIf { it.isFile }
 
-    /** 拉首页卡片并缓存图片。服务器出错时沿用上次的首页，不影响看板；断网照常抛出。 */
-    private suspend fun refreshHome(api: ApiClient) {
+    /**
+     * 拉首页卡片并缓存图片。服务器出错时沿用上次的首页，不影响看板，但把原因返回给状态栏显示，
+     * 免得卡片没更新却看不出为什么；断网照常抛出。
+     */
+    private suspend fun refreshHome(api: ApiClient): String? {
         val fetched = try {
             api.home()
         } catch (e: ApiException) {
-            return
+            return "首页卡片没更新：${e.message}"
         }
         home = fetched?.first
         store.writeHome(fetched?.second)
         publish { it } // 先把新卡片显示出来，图片接着下载
         cacheImages(api, fetched?.first)
+        return null
     }
 
     /** 下载首页要用的图片，删掉用不上的（过期或被替换的）。下载失败不影响看板，下次同步再试。 */
