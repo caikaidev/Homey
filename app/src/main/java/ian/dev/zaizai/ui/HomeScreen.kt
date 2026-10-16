@@ -66,7 +66,7 @@ fun HomeScreen(
             .background(ZaiZai.colors.background)
             .safeDrawingPadding(),
     ) {
-        Header(board, board?.let { "${it.nickname}今天的事" } ?: "今天的事", BoardLogic.greeting(BizDate.hhmm(now)), onRefresh, onSettings)
+        Header(board, board?.let { "${it.nickname}今天的事" } ?: "今天的事", BoardLogic.greeting(BizDate.hhmm(now)), onRefresh, onSettings, syncing = state.syncing)
         StatusBar(state, now)
         if (board == null) {
             EmptyState(state, onRefresh)

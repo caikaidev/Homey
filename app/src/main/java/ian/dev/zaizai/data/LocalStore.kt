@@ -9,8 +9,8 @@ data class Config(
     val familyKey: String = "",
     /** 我是谁：登记时的记录人。 */
     val recorder: String = "",
-    /** 打开 App 时语音播报。 */
-    val speak: Boolean = true,
+    /** 打开 App 时语音播报，默认关。 */
+    val speak: Boolean = false,
 ) {
     val isComplete get() = server.isNotBlank() && familyKey.isNotBlank() && recorder.isNotBlank()
 }
@@ -30,14 +30,15 @@ class LocalStore(context: Context) {
         server = config.getString("server", "").orEmpty(),
         familyKey = config.getString("family_key", "").orEmpty(),
         recorder = config.getString("recorder", "").orEmpty(),
-        speak = config.getBoolean("speak", true),
+        // 换了新键：以前默认开着存的是 true，改成默认关以后不沿用旧值
+        speak = config.getBoolean("speak_on_open", false),
     )
 
     fun writeConfig(c: Config) = config.edit(commit = true) {
         putString("server", c.server)
         putString("family_key", c.familyKey)
         putString("recorder", c.recorder)
-        putBoolean("speak", c.speak)
+        putBoolean("speak_on_open", c.speak)
     }
 
     fun readSnapshot(): Snapshot? {
