@@ -3,13 +3,15 @@ import { editor } from './views/editor.js';
 import { tasks } from './views/tasks.js';
 import { history } from './views/history.js';
 import { settings } from './views/settings.js';
+import { babyroom } from './views/babyroom.js';
 
-/** 哈希路由：#/today、#/new、#/tasks、#/tasks/<id>/edit、#/history、#/settings */
+/** 哈希路由：#/today、#/new、#/tasks、#/tasks/<id>/edit、#/babyroom、#/history、#/settings */
 const routes = [
   [/^\/today$/, 'today', () => today],
   [/^\/new$/, 'new', () => editor],
   [/^\/tasks\/([^/]+)\/edit$/, 'tasks', () => editor],
   [/^\/tasks$/, 'tasks', () => tasks],
+  [/^\/babyroom$/, 'tasks', () => babyroom],
   [/^\/history$/, 'history', () => history],
   [/^\/settings$/, 'settings', () => settings],
 ];

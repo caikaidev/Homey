@@ -75,6 +75,11 @@ export async function editor(el, taskId) {
       ${warnings.map((w) => `<div class="note" role="note">${icons.warn}<div>${esc(w)}</div></div>`).join('')}
       <div class="grid2">
         <label class="field span2">名称<input name="title" maxlength="40" value="${esc(form.title)}" placeholder="如：AD 一粒" required></label>
+        <div class="field span2">类别（奶奶的 App 首页按类别分卡片）<div class="chips">${KINDS.map(
+          ([k, label]) => `<label class="chip ${form.kind === k ? 'on' : ''}"><input type="radio" name="kind" value="${k}" ${
+            form.kind === k ? 'checked' : ''
+          } class="sr-only">${label}</label>`,
+        ).join('')}</div></div>
         <label class="field">频率
           <select name="freq">
             <option value="1" ${freqValue() === '1' ? 'selected' : ''}>每天</option>
@@ -204,7 +209,7 @@ export async function editor(el, taskId) {
     const btn = el.querySelector('[data-save]');
     btn.disabled = true;
     try {
-      const body = { title: form.title.trim(), schedule: s, note: form.note.trim(), ...(isEdit ? {} : { kind: form.kind }) };
+      const body = { title: form.title.trim(), kind: form.kind, schedule: s, note: form.note.trim() };
       if (isEdit) await api(`/tasks/${encodeURIComponent(taskId)}`, { method: 'PATCH', body });
       else await api('/tasks', { method: 'POST', body });
       toast(isEdit ? '已保存' : '已新建');
@@ -224,6 +229,11 @@ export async function editor(el, taskId) {
     else if (t.name === 'note') form.note = t.value;
     else if (t.name === 'start') form.start = t.value;
     else if (t.name === 'end') form.end = t.value;
+    else if (t.name === 'kind') {
+      form.kind = t.value;
+      for (const chip of el.querySelectorAll('input[name=kind]')) chip.closest('.chip').classList.toggle('on', chip.checked);
+      return;
+    }
     else if (t.dataset.wd !== undefined) {
       const d = +t.dataset.wd;
       form.weekdays = t.checked ? [...new Set([...form.weekdays, d])] : form.weekdays.filter((x) => x !== d);
@@ -294,6 +304,7 @@ function speechSupported() {
 }
 
 const WD = ['日', '一', '二', '三', '四', '五', '六'];
+const KINDS = [['supplement', '补剂'], ['medicine', '药品']];
 
 /** 服务端排期 → 表单状态。 */
 function fromSchedule(s, extra) {

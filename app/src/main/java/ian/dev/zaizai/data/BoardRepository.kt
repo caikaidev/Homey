@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+import java.io.File
 import java.io.IOException
 import java.util.UUID
 
@@ -28,6 +30,8 @@ data class BoardState(
     val syncing: Boolean,
     /** 需要家长处理的问题（口令错、地址错），正常为 null。 */
     val problem: String?,
+    /** 首页大卡片，见 [BoardLogic.homeCards]。 */
+    val cards: List<HomeCard> = emptyList(),
 )
 
 enum class SyncResult { OK, OFFLINE, FAILED, NOT_CONFIGURED }
@@ -43,6 +47,8 @@ class BoardRepository(private val app: Context, private val store: LocalStore = 
 
     @Volatile private var snapshot: Snapshot? = store.readSnapshot()
     @Volatile private var queue: List<PendingOp> = store.readQueue()
+    @Volatile private var home: Home? = store.readHome()
+    private val imageDir = File(app.filesDir, "images")
 
     private val _state = MutableStateFlow(
         build(store.readConfig(), offline = false, syncing = false, problem = null),
@@ -57,6 +63,7 @@ class BoardRepository(private val app: Context, private val store: LocalStore = 
         // 换了服务器，旧缓存和没传完的登记都不属于新服务器了
         if (ApiClient.normalizeServer(old.server) != ApiClient.normalizeServer(config.server)) {
             snapshot = null
+            home = null
             store.clearSnapshot()
             queue = emptyList()
             store.writeQueue(queue)
@@ -78,6 +85,7 @@ class BoardRepository(private val app: Context, private val store: LocalStore = 
             val offset = if (fetched.board.serverTime > 0) fetched.board.serverTime - fetched.receivedAt else 0L
             store.writeSnapshot(fetched.raw, fetched.receivedAt, offset)
             snapshot = Snapshot(fetched.board, fetched.receivedAt, offset)
+            refreshHome(api)
             publish { it.copy(offline = false, syncing = false, problem = null) }
             SyncResult.OK
         } catch (e: IOException) {
@@ -87,6 +95,45 @@ class BoardRepository(private val app: Context, private val store: LocalStore = 
             val message = if (e.status == 401) "家庭口令不对，请让家长在设置里重新填写" else e.message
             publish { it.copy(offline = false, syncing = false, problem = message) }
             SyncResult.FAILED
+        }
+    }
+
+    /** 本机缓存的图片文件；还没下载好返回 null。 */
+    fun imageFile(image: DayImage): File? = File(imageDir, image.id).takeIf { it.isFile }
+
+    /** 拉首页卡片并缓存图片。服务器出错时沿用上次的首页，不影响看板；断网照常抛出。 */
+    private suspend fun refreshHome(api: ApiClient) {
+        val fetched = try {
+            api.home()
+        } catch (e: ApiException) {
+            return
+        }
+        home = fetched?.first
+        store.writeHome(fetched?.second)
+        cacheImages(api, fetched?.first)
+    }
+
+    /** 下载首页要用的图片，删掉用不上的（过期或被替换的）。下载失败不影响看板，下次同步再试。 */
+    private suspend fun cacheImages(api: ApiClient, current: Home?) {
+        val wanted = current?.cards.orEmpty().mapNotNull { it.image }
+        withContext(Dispatchers.IO) {
+            imageDir.listFiles()?.filter { f -> wanted.none { it.id == f.name } }?.forEach { it.delete() }
+        }
+        for (image in wanted) {
+            if (imageFile(image) != null) continue
+            try {
+                val bytes = api.download(image.url)
+                withContext(Dispatchers.IO) {
+                    imageDir.mkdirs()
+                    val tmp = File(imageDir, "${image.id}.part")
+                    tmp.writeBytes(bytes)
+                    tmp.renameTo(File(imageDir, image.id))
+                }
+            } catch (e: ApiException) {
+                // 图片被删了或替换了，等下次同步拿新的
+            } catch (e: IOException) {
+                // 网断了，等下次同步
+            }
         }
     }
 
@@ -141,15 +188,17 @@ class BoardRepository(private val app: Context, private val store: LocalStore = 
     private fun build(config: Config, offline: Boolean, syncing: Boolean, problem: String?): BoardState {
         val snap = snapshot
         val ops = queue
+        val board = snap?.board?.let { BoardLogic.applyPending(it, ops, config.recorder) }
         return BoardState(
             config = config,
-            board = snap?.board?.let { BoardLogic.applyPending(it, ops, config.recorder) },
+            board = board,
             queued = ops.map { it.key }.toSet(),
             syncedAt = snap?.syncedAt,
             clockOffset = snap?.clockOffset ?: 0,
             offline = offline,
             syncing = syncing,
             problem = problem,
+            cards = BoardLogic.homeCards(home, board),
         )
     }
 }

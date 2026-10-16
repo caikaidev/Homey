@@ -34,7 +34,7 @@ data class BoardItem(
     val completion: Completion?,
 )
 
-data class TomorrowItem(val taskId: String, val title: String, val slot: String)
+data class TomorrowItem(val taskId: String, val title: String, val slot: String, val kind: String = "supplement")
 
 /** `GET /api/board` 的内容，字段见 docs/API.md。 */
 data class Board(
@@ -60,7 +60,7 @@ data class Board(
                 today = json.optJSONArray("today").objects().map(::parseItem),
                 tomorrowDate = tomorrow?.optString("date").orEmpty(),
                 tomorrow = tomorrow?.optJSONArray("items").objects().map {
-                    TomorrowItem(it.getString("task_id"), it.getString("title"), it.getString("slot"))
+                    TomorrowItem(it.getString("task_id"), it.getString("title"), it.getString("slot"), it.optString("kind", "supplement"))
                 },
                 serverTime = json.optLong("serverTime"),
             )
@@ -87,6 +87,50 @@ data class Board(
                 },
             )
         }
+    }
+}
+
+/** 只看某一类（补剂、药品）的看板：首页点进某张卡片时用。 */
+fun Board.ofKind(kind: String): Board =
+    copy(today = today.filter { it.kind == kind }, tomorrow = tomorrow.filter { it.kind == kind })
+
+/** 按日期使用的图片（宝宝屋），`url` 是相对服务器的路径。 */
+data class DayImage(val id: String, val useDate: String, val url: String)
+
+enum class CardType { TASKS, IMAGE }
+
+/** App 首页的一张大卡片。事项类卡片的 total / pending 由看板现算，离线登记也立刻反映。 */
+data class HomeCard(
+    val key: String,
+    val type: CardType,
+    val title: String,
+    val total: Int = 0,
+    val pending: Int = 0,
+    val image: DayImage? = null,
+)
+
+/** `GET /api/home`：服务器说今天有哪些类别要显示。 */
+data class Home(val date: String, val cards: List<HomeCard>) {
+    companion object {
+        fun parse(json: JSONObject) = Home(
+            date = json.getString("date"),
+            cards = json.optJSONArray("cards").objects().mapNotNull { o ->
+                val type = when (o.optString("type")) {
+                    "tasks" -> CardType.TASKS
+                    "image" -> CardType.IMAGE
+                    else -> return@mapNotNull null // 新版服务器加的类别，旧 App 先不显示
+                }
+                val img = o.optJSONObject("image")
+                HomeCard(
+                    key = o.getString("key"),
+                    type = type,
+                    title = o.optString("title").ifBlank { o.getString("key") },
+                    total = o.optInt("total"),
+                    pending = o.optInt("pending"),
+                    image = img?.let { DayImage(it.getString("id"), it.getString("use_date"), it.getString("url")) },
+                )
+            }.filter { it.type != CardType.IMAGE || it.image != null },
+        )
     }
 }
 

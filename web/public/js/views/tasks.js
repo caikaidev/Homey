@@ -1,6 +1,8 @@
 import { api } from '../api.js';
 import { esc, errorView, icons, toast } from '../ui.js';
 
+const KIND_LABEL = { supplement: '补剂', medicine: '药品' };
+
 /** 事项管理：进行中 / 已暂停 / 已归档；编辑、暂停、恢复、归档。 */
 export async function tasks(el) {
   async function load() {
@@ -21,13 +23,16 @@ export async function tasks(el) {
 
     el.innerHTML = `
       <header class="head head-row"><h1>事项</h1><a class="btn link" href="#/new">+ 新建</a></header>
+      <a class="card row" href="#/babyroom" style="text-decoration:none;color:inherit">
+        <div class="grow"><div class="title" style="font-weight:500">宝宝屋图片</div>
+        <div class="small muted">按日期上传扫码图，奶奶当天在 App 里打开给工作人员扫</div></div><span aria-hidden="true">›</span></a>
       <h2 class="section-title">进行中 · ${active.length}</h2>
       ${
         active.length
           ? '<div class="cards">' + active
               .map(
                 (t) => `<article class="card">
-                  <div class="item"><div class="body"><div class="title">${esc(t.title)}</div><div class="sub">${esc(t.describe)}</div>
+                  <div class="item"><div class="body"><div class="title">${esc(t.title)} <span class="tag">${KIND_LABEL[t.kind] ?? '补剂'}</span></div><div class="sub">${esc(t.describe)}</div>
                   ${t.note ? `<div class="sub">${esc(t.note)}</div>` : ''}</div></div>
                   <div class="row">${edit(t)}
                     <button type="button" class="btn sm" data-status="paused" data-id="${esc(t.id)}">暂停</button>

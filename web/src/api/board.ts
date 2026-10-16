@@ -24,7 +24,7 @@ export function presentCompletion(row: CompletionRow, actor: Actor, now: number)
   };
 }
 
-async function completionsBetween(db: D1Database, from: string, to: string): Promise<CompletionRow[]> {
+export async function completionsBetween(db: D1Database, from: string, to: string): Promise<CompletionRow[]> {
   const { results } = await db
     .prepare('SELECT * FROM completions WHERE biz_date BETWEEN ? AND ? AND undone_at IS NULL')
     .bind(from, to)
@@ -36,7 +36,7 @@ async function completionsBetween(db: D1Database, from: string, to: string): Pro
  * 某业务日每个事项的实例：按当前排期算出的时间点，再加上当天已登记但排期里已没有的时间点
  * （改过排期时保留已有登记）。
  */
-function instancesOn(date: string, tasks: Task[], completions: CompletionRow[]) {
+export function instancesOn(date: string, tasks: Task[], completions: CompletionRow[]) {
   const byKey = new Map(completions.filter((c) => c.biz_date === date).map((c) => [`${c.task_id}|${c.slot}`, c]));
   const out: { task: Task; slot: string; completion: CompletionRow | null }[] = [];
   for (const task of tasks) {
