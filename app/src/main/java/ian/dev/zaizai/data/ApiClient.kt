@@ -54,6 +54,34 @@ class ApiClient(
         return FetchedBoard(board, json.toString(), clock())
     }
 
+    /** 首页卡片。服务器还没有这个接口（404）时返回 null，首页按看板里的类别显示。 */
+    suspend fun home(): Pair<Home, String>? {
+        val json = try {
+            call("GET", "/api/home")
+        } catch (e: ApiException) {
+            if (e.status == 404) return null
+            throw e
+        }
+        return try {
+            Home.parse(json) to json.toString()
+        } catch (e: JSONException) {
+            throw ApiException(200, "bad_response", "服务器返回的首页数据看不懂")
+        }
+    }
+
+    /** 下载图片内容，[path] 是 `/api/images/<id>`。 */
+    suspend fun download(path: String): ByteArray = withContext(Dispatchers.IO) {
+        val request = Request.Builder()
+            .url(base + path)
+            .header("Authorization", "Bearer $familyKey")
+            .header("X-Recorder", encodeRecorder(recorder))
+            .build()
+        http.newCall(request).execute().use { res ->
+            if (!res.isSuccessful) throw ApiException(res.code, "http_${res.code}", "图片下载失败（${res.code}）")
+            res.body?.bytes() ?: throw ApiException(res.code, "bad_response", "图片是空的")
+        }
+    }
+
     suspend fun send(op: PendingOp) {
         val body = JSONObject().put("task_id", op.taskId).put("date", op.date).put("slot", op.slot)
         when (op.type) {

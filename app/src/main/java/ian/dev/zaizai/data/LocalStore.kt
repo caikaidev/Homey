@@ -19,7 +19,7 @@ data class Config(
 data class Snapshot(val board: Board, val syncedAt: Long, val clockOffset: Long)
 
 /**
- * App 私有存储（SharedPreferences）：设置、看板快照、待上传队列、已提醒过的实例。
+ * App 私有存储（SharedPreferences）：设置、看板和首页快照、待上传队列、已提醒过的实例。
  * 队列用 commit() 同步写盘，点了确认马上杀进程也不会丢。
  */
 class LocalStore(context: Context) {
@@ -52,7 +52,14 @@ class LocalStore(context: Context) {
         putLong("clock_offset", clockOffset)
     }
 
-    fun clearSnapshot() = cache.edit(commit = true) { remove("board"); remove("synced_at") }
+    fun clearSnapshot() = cache.edit(commit = true) { remove("board"); remove("synced_at"); remove("home") }
+
+    fun readHome(): Home? {
+        val raw = cache.getString("home", null) ?: return null
+        return runCatching { Home.parse(JSONObject(raw)) }.getOrNull()
+    }
+
+    fun writeHome(raw: String?) = cache.edit(commit = true) { if (raw == null) remove("home") else putString("home", raw) }
 
     fun readQueue(): List<PendingOp> = PendingOp.parseList(cache.getString("queue", null))
 

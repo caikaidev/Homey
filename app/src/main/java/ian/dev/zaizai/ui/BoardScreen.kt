@@ -29,6 +29,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
@@ -73,10 +74,16 @@ import ian.dev.zaizai.data.TomorrowItem
 import ian.dev.zaizai.ui.theme.ZaiZai
 import kotlinx.coroutines.delay
 
-/** 今日照护：打开就是它。未登记在前，大按钮“确认已喂”，2 分钟内可撤销；明天只读。 */
+/**
+ * 某一类（补剂、药品）的今日看板：首页点卡片进来，[board] 已经只含这一类。
+ * 未登记在前，大按钮“确认已喂”，2 分钟内可撤销；明天只读。
+ */
 @Composable
 fun BoardScreen(
     state: BoardState,
+    board: Board?,
+    title: String,
+    onBack: () -> Unit,
     serverNow: () -> Long,
     onCheckin: (BoardItem) -> Unit,
     onUndo: (BoardItem) -> Unit,
@@ -91,15 +98,13 @@ fun BoardScreen(
             delay(1_000)
         }
     }
-    val board = state.board
-
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(ZaiZai.colors.background)
             .safeDrawingPadding(),
     ) {
-        Header(board, BoardLogic.greeting(BizDate.hhmm(now)), onRefresh, onSettings)
+        Header(board, "${board?.nickname ?: "崽崽"}今天的$title", BoardLogic.greeting(BizDate.hhmm(now)), onRefresh, onSettings, onBack)
         StatusBar(state, now)
         if (board == null) {
             EmptyState(state, onRefresh)
@@ -135,15 +140,28 @@ fun BoardScreen(
     }
 }
 
+/** 页头：有 [onBack] 时左边是大返回键（二级页面）。 */
 @Composable
-private fun Header(board: Board?, greeting: String, onRefresh: () -> Unit, onSettings: () -> Unit) {
+internal fun Header(
+    board: Board?,
+    title: String,
+    greeting: String,
+    onRefresh: () -> Unit,
+    onSettings: () -> Unit,
+    onBack: (() -> Unit)? = null,
+) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 12.dp),
+        modifier = Modifier.fillMaxWidth().padding(start = if (onBack == null) 20.dp else 4.dp, end = 8.dp, top = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        if (onBack != null) {
+            IconButton(onClick = onBack, modifier = Modifier.size(64.dp)) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回", tint = ZaiZai.colors.ink, modifier = Modifier.size(36.dp))
+            }
+        }
         Column(Modifier.weight(1f)) {
             Text(
-                text = board?.let { "${it.nickname}今天的事" } ?: "今天的事",
+                text = title,
                 style = MaterialTheme.typography.headlineMedium,
                 color = ZaiZai.colors.ink,
             )
@@ -166,7 +184,7 @@ private fun Header(board: Board?, greeting: String, onRefresh: () -> Unit, onSet
 
 /** 同步状态：离线时明确写“离线 · 最后同步 HH:mm”，不假装是最新。 */
 @Composable
-private fun StatusBar(state: BoardState, now: Long) {
+internal fun StatusBar(state: BoardState, now: Long) {
     val synced = state.syncedAt?.let { BizDate.hhmm(it + state.clockOffset) }
     val board = state.board
     val (text, strong) = when {
@@ -201,7 +219,7 @@ private fun StatusBar(state: BoardState, now: Long) {
 }
 
 @Composable
-private fun EmptyState(state: BoardState, onRefresh: () -> Unit) {
+internal fun EmptyState(state: BoardState, onRefresh: () -> Unit) {
     Column(
         modifier = Modifier.fillMaxWidth().padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),

@@ -39,6 +39,30 @@ object BoardLogic {
         return if (last.type == OpType.UNDO) queue else queue - last
     }
 
+    /**
+     * 首页卡片：哪些类别显示听服务器的（[home]），事项数按本机看板现算。
+     * 还没拿到首页数据（或服务器没有这个接口）时，按看板里出现的类别显示。
+     * 图片卡只在它的使用日期当天显示，跨过零点还没同步也不会显示昨天的图。
+     */
+    fun homeCards(home: Home?, board: Board?): List<HomeCard> {
+        val today = board?.date ?: home?.date ?: return emptyList()
+        val base = home?.cards ?: board!!.let { b ->
+            val kinds = (b.today.map { it.kind } + b.tomorrow.map { it.kind }).toSet()
+            KIND_TITLES.filterKeys { it in kinds }.map { (k, title) -> HomeCard(k, CardType.TASKS, title) }
+        }
+        return base.mapNotNull { card ->
+            when (card.type) {
+                CardType.TASKS -> {
+                    val items = board?.today?.filter { it.kind == card.key } ?: return@mapNotNull card
+                    card.copy(total = items.size, pending = items.count { it.status == ItemStatus.PENDING })
+                }
+                CardType.IMAGE -> card.takeIf { it.image?.useDate == today }
+            }
+        }
+    }
+
+    private val KIND_TITLES = linkedMapOf("supplement" to "补剂", "medicine" to "药品")
+
     /** 还能撤销多久（毫秒）；不能撤销返回 0。只能撤销自己的登记。 */
     fun undoRemainingMs(item: BoardItem, me: String, serverNow: Long): Long {
         val c = item.completion ?: return 0

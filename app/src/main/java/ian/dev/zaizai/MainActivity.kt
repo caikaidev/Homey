@@ -20,9 +20,13 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import ian.dev.zaizai.data.BoardItem
 import ian.dev.zaizai.data.BoardLogic
+import ian.dev.zaizai.data.CardType
+import ian.dev.zaizai.data.ofKind
 import ian.dev.zaizai.data.SyncResult
 import ian.dev.zaizai.sync.Notifier
 import ian.dev.zaizai.ui.BoardScreen
+import ian.dev.zaizai.ui.HomeScreen
+import ian.dev.zaizai.ui.ImageScreen
 import ian.dev.zaizai.ui.SetupScreen
 import ian.dev.zaizai.ui.Speaker
 import ian.dev.zaizai.ui.theme.ZaiZaiTheme
@@ -63,17 +67,41 @@ class MainActivity : ComponentActivity() {
                             askNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
                         }
                     }
-                    BoardScreen(
-                        state = state,
-                        serverNow = { repository.serverNow() },
-                        onCheckin = {
-                            sayCheckin(it)
-                            repository.checkin(it)
-                        },
-                        onUndo = { repository.undo(it) },
-                        onRefresh = { lifecycleScope.launch { repository.sync() } },
-                        onSettings = { editing = true },
-                    )
+                    // 首页 → 某一类的看板 / 全屏图片。卡片没了（比如图片过期）就回首页。
+                    var page by rememberSaveable { mutableStateOf<String?>(null) }
+                    val card = state.cards.firstOrNull { it.key == page }
+                    BackHandler(enabled = card != null) { page = null }
+                    val refresh = { lifecycleScope.launch { repository.sync() }; Unit }
+                    when {
+                        card == null -> HomeScreen(
+                            state = state,
+                            serverNow = { repository.serverNow() },
+                            onOpen = { page = it.key },
+                            onRefresh = refresh,
+                            onSettings = { editing = true },
+                        )
+                        card.type == CardType.IMAGE -> ImageScreen(
+                            title = card.title,
+                            file = card.image?.let { repository.imageFile(it) },
+                            syncing = state.syncing,
+                            onRetry = refresh,
+                            onBack = { page = null },
+                        )
+                        else -> BoardScreen(
+                            state = state,
+                            board = state.board?.ofKind(card.key),
+                            title = card.title,
+                            onBack = { page = null },
+                            serverNow = { repository.serverNow() },
+                            onCheckin = {
+                                sayCheckin(it)
+                                repository.checkin(it)
+                            },
+                            onUndo = { repository.undo(it) },
+                            onRefresh = refresh,
+                            onSettings = { editing = true },
+                        )
+                    }
                 }
             }
         }
