@@ -18,6 +18,10 @@ import ian.dev.zaizai.ZaizaiApp
 import ian.dev.zaizai.data.BizDate
 import ian.dev.zaizai.data.BoardLogic
 import ian.dev.zaizai.data.BoardState
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 /** 桌面小组件：大时钟 + 大字显示下一件该做的事，可以代替系统时钟；喇叭按钮念出今天还剩的事和手机电量。内容来自本机缓存，每次看板状态变化时刷新；点击进入 App（会顺便同步）。 */
 class BoardWidgetProvider : AppWidgetProvider() {
@@ -27,9 +31,27 @@ class BoardWidgetProvider : AppWidgetProvider() {
         SpeakService.start(context)
     }
 
+    /**
+     * 系统每 30 分钟（updatePeriodMillis）叫一次。以前这里只把本机缓存重画一遍，不联网，
+     * 后台同步又常被小米等系统省电策略拦掉，小组件就一直停在上次打开 App 时的样子。
+     * 现在顺便同步一次，同步完 publish 会再刷新小组件。
+     */
     override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) {
-        val state = (context.applicationContext as ZaizaiApp).repository.state.value
-        manager.updateAppWidget(ids, BoardWidget.views(context, state))
+        val app = context.applicationContext as ZaizaiApp
+        manager.updateAppWidget(ids, BoardWidget.views(context, app.repository.state.value))
+        val result = goAsync()
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                withTimeoutOrNull(SYNC_TIMEOUT_MS) { app.repository.sync() }
+            } finally {
+                result.finish()
+            }
+        }
+    }
+
+    private companion object {
+        /** 后台广播最多给 60 秒，留足余量。 */
+        const val SYNC_TIMEOUT_MS = 25_000L
     }
 }
 
@@ -86,6 +108,12 @@ object BoardWidget {
             return views
         }
 
+        // 过了零点还没同步上：别把昨天的事当成今天的显示
+        if (board.date != BizDate.date(System.currentTimeMillis() + state.clockOffset)) {
+            badge(context, views, "点开看看", done = false)
+            views.setTextViewText(R.id.widget_sub, "还没换到今天")
+            return views
+        }
         val content = BoardLogic.widgetContent(board)
         badge(context, views, content.big, content.done)
         views.setTextViewText(R.id.widget_sub, content.sub)
